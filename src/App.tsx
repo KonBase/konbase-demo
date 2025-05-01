@@ -53,6 +53,11 @@ import ImportExport from './pages/inventory/ImportExport';
 
 // Reports
 import ReportsList from './pages/reports/ReportsList';
+import InventoryStatusReport from './pages/reports/InventoryStatusReport';
+import ConventionEquipmentReport from './pages/reports/ConventionEquipmentReport';
+import ConventionConsumablesReport from './pages/reports/ConventionConsumablesReport';
+import UserActivityReport from './pages/reports/UserActivityReport';
+import AuditLogReport from './pages/reports/AuditLogReport';
 
 // Auth pages
 import Login from './pages/auth/Login';
@@ -86,7 +91,7 @@ function App() {
   const adminRoles: UserRoleType[] = ['admin', 'system_admin', 'super_admin'];
 
   //Define mobile flag
-  const isMobile:boolean = isMobileUserAgent();
+  const isMobile:void = isMobileUserAgent();
 
   useEffect(() => {
     isConfigured();
@@ -202,7 +207,14 @@ function App() {
                     path="reports/*"
                     element={
                       <RoleGuard allowedRoles={managerRoles}> {/* Example: Managers and above */}
-                        <ReportsList />
+                        <Routes>
+                          <Route index element={<ReportsList />} />
+                          <Route path="inventory-status" element={<InventoryStatusReport />} />
+                          <Route path="convention-equipment" element={<ConventionEquipmentReport />} />
+                          <Route path="convention-consumables" element={<ConventionConsumablesReport />} />
+                          <Route path="user-activity" element={<UserActivityReport />} />
+                          <Route path="audit-log" element={<AuditLogReport />} />
+                        </Routes>
                       </RoleGuard>
                     }
                   />
@@ -225,4 +237,3 @@ function App() {
 }
 
 export default App;
-

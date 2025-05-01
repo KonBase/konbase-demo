@@ -11,54 +11,28 @@ const CONFIG_KEY = 'konbase_config';
 
 // Load configuration from localStorage
 export function loadConfig(): SupabaseConfig | null {
-  try {
-    const configStr = localStorage.getItem(CONFIG_KEY);
-    if (!configStr) return null;
-    
-    return JSON.parse(configStr) as SupabaseConfig;
-  } catch (error) {
-    console.error('Failed to load configuration:', error);
-    return null;
-  }
+  // In demo mode, we don't need real config
+  console.log("loadConfig called in Demo Mode - returning mock config status");
+  return { url: 'mock-url', key: 'mock-key', configured: true };
 }
 
 // Save configuration to localStorage
 export function saveConfig(config: SupabaseConfig): boolean {
-  try {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-    return true;
-  } catch (error) {
-    console.error('Failed to save configuration:', error);
-    return false;
-  }
+  // In demo mode, saving is ignored
+  console.log("saveConfig called in Demo Mode - ignoring", config);
+  return true;
 }
 
 // Check if application is configured via localStorage OR environment variables
 export function isConfigured(): boolean {
-  // First, check localStorage
-  const config = loadConfig();
-  if (config?.configured) {
-    // Explicitly check if url and key are present in stored config
-    if (config.url && config.key) {
-      return true;
-    }
-  }
-
-  // If not configured via localStorage, check environment variables
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  // Return true if both environment variables are present and non-empty
-  return !!(supabaseUrl && supabaseAnonKey);
+  // In demo mode, always return true so the app doesn't get stuck on config screen
+  console.log("isConfigured called in Demo Mode - returning true");
+  return true;
 }
 
 // Clear configuration
 export function clearConfig(): boolean {
-  try {
-    localStorage.removeItem(CONFIG_KEY);
-    return true;
-  } catch (error) {
-    console.error('Failed to clear configuration:', error);
-    return false;
-  }
+  // In demo mode, clearing is ignored
+  console.log("clearConfig called in Demo Mode - ignoring");
+  return true;
 }

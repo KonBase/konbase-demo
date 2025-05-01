@@ -1,178 +1,73 @@
 import { createClient } from '@supabase/supabase-js';
-import { loadConfig } from './config-store';
+import { mockSupabase } from './mockSupabase'; // Import the mock client
+import { Database } from '@/lib/database.types'; // Import your generated DB types
 import { logDebug, isDebugModeEnabled } from '@/utils/debug';
 
-// Store a single instance of the Supabase client
-let supabaseClient = null;
+// Environment variables for Supabase connection
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Track realtime connection status
-let realtimeConnected = false;
-let lastConnectionAttempt = 0;
-const connectionRetryDelay = 10000; // 10 seconds between reconnection attempts
+// Determine if we should use the mock client
+// Use mock if URL or Key is missing, or if explicitly set via another env var (optional)
+const useMock = !supabaseUrl || !supabaseAnonKey || import.meta.env.VITE_USE_MOCK_SUPABASE === 'true';
 
-// Function to create a client instance - used internally only
-const createSupabaseClient = (url, key) => {
-  try {
-    const client = createClient(url, key, {
-      auth: {
-        persistSession: true,
-        storageKey: 'konbase-supabase-auth'
-      },
-      global: {
-        // Add global error handler for fetch requests
-        fetch: (url, options) => {
-          return fetch(url, options)
-            .then(response => {
-              if (response.status === 404 && url.includes('execute_sql')) {
-                // Log specific error for execute_sql RPC endpoint
-                if (isDebugModeEnabled()) {
-                  logDebug('execute_sql RPC endpoint not found (404)', { url }, 'error');
-                }
-                // Transform to a proper error object with status code
-                return response.json().then(data => {
-                  throw { status: 404, message: 'Not Found', details: data };
-                });
-              }
-              return response;
-            })
-            .catch(error => {
-              // Log all fetch errors in debug mode
-              if (isDebugModeEnabled()) {
-                logDebug('Supabase fetch error', { error, url }, 'error');
-              }
-              throw error;
-            });
-        }
-      }
-    });
+// Create the Supabase client (either real or mock)
+const supabaseClient = useMock
+  ? mockSupabase // Use the imported mock client
+  : createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-    // Set up realtime connection monitoring
-    if (client.realtime) {
-      setupRealtimeMonitoring(client);
-    }
+// Log which client is being used (optional, good for debugging)
+if (useMock) {
+  console.warn("Using Mock Supabase Client for Demo Mode.");
+} else {
+  console.info("Using Real Supabase Client.");
+}
 
-    return client;
-  } catch (error) {
-    console.error('Error creating Supabase client:', error);
-    return null;
-  }
+/**
+ * Checks if the application is currently using the mock Supabase client.
+ * @returns {boolean} True if using the mock client, false otherwise.
+ */
+export const isMock = (): boolean => {
+  return useMock;
 };
 
-// Monitor realtime connection status
-const setupRealtimeMonitoring = (client) => {
-  // Only attempt once per period
-  const now = Date.now();
-  if (now - lastConnectionAttempt < connectionRetryDelay) {
-    return;
+/**
+ * Checks if the Supabase Realtime client is connected.
+ * Basic implementation for demo purposes.
+ * @returns {boolean} True if potentially connected, false otherwise.
+ */
+export const isRealtimeConnected = (): boolean => {
+  // Always return false to disable realtime features
+  if (isMock()) {
+    console.log("[Konbase Debug] isRealtimeConnected called in Demo Mode - returning false");
   }
-  
-  lastConnectionAttempt = now;
-  
-  try {
-    const channel = client.channel('system-health');
-    
-    channel
-      .on('system', { event: 'disconnect' }, () => {
-        realtimeConnected = false;
-        if (isDebugModeEnabled()) {
-          logDebug('Supabase realtime disconnected', null, 'warn');
-        }
-        
-        // Try to reconnect after a delay
-        setTimeout(() => {
-          try {
-            if (!realtimeConnected) {
-              setupRealtimeMonitoring(client);
-            }
-          } catch (e) {
-            // Ignore errors during reconnection attempts
-          }
-        }, connectionRetryDelay);
-      })
-      .subscribe((status) => {
-        realtimeConnected = status === 'SUBSCRIBED';
-        if (isDebugModeEnabled()) {
-          logDebug(`Supabase realtime status: ${status}`, null, realtimeConnected ? 'info' : 'warn');
-        }
-      });
-  } catch (error) {
-    if (isDebugModeEnabled()) {
-      logDebug('Failed to setup realtime monitoring', error, 'error');
-    }
-  }
+  return false; 
 };
 
-// Initialize the Supabase client (if not already initialized)
-const initClient = () => {
-  // If we already have a client, return it
-  if (supabaseClient) {
-    return supabaseClient;
-  }
-  
-  // First try to get from config store
-  const config = loadConfig();
-  if (config?.url && config?.key) {
-    if (isDebugModeEnabled()) {
-      logDebug('Initializing Supabase client from stored config', null, 'info');
-    } else {
-      console.log('Initializing Supabase client from stored config');
-    }
-    supabaseClient = createSupabaseClient(config.url, config.key);
-    return supabaseClient;
-  }
-  
-  // If no stored config, try environment variables
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  
-  if (supabaseUrl && supabaseAnonKey) {
-    if (isDebugModeEnabled()) {
-      logDebug('Initializing Supabase client from environment variables', null, 'info');
-    } else {
-      console.log('Initializing Supabase client from environment variables');
-    }
-    supabaseClient = createSupabaseClient(supabaseUrl, supabaseAnonKey);
-    return supabaseClient;
-  }
-  
-  console.error('No Supabase credentials found for client');
-  return null;
-};
+// Export the chosen client instance
+export const supabase = supabaseClient;
 
-// A single exported instance for direct import
-export const supabase = initClient();
-
-// This function is for when a new instance is needed (like after config changes)
+/**
+ * Initializes the Supabase client.
+ * In demo mode, this will return the mock client.
+ */
 export const initializeSupabaseClient = () => {
-  try {
-    // Force client re-initialization
-    supabaseClient = null;
-    realtimeConnected = false;
-    return initClient();
-  } catch (error) {
-    console.error('Error initializing Supabase client:', error);
-    return null;
-  }
+  logDebug('initializeSupabaseClient called - returning client', null, 'info');
+  return supabase;
 };
 
-// Get the existing client or initialize if needed
+/**
+ * Retrieves the Supabase client instance.
+ */
 export const getSupabaseClient = () => {
-  if (!supabaseClient) {
-    return initClient();
-  }
-  return supabaseClient;
+  return supabase;
 };
 
-// Check if the realtime connection is active
-export const isRealtimeConnected = () => {
-  return realtimeConnected;
-};
-
-// Reconnect realtime if needed
+/**
+ * Reconnects the Supabase Realtime client.
+ * In demo mode, this does nothing.
+ */
 export const reconnectRealtime = () => {
-  if (supabaseClient && !realtimeConnected) {
-    setupRealtimeMonitoring(supabaseClient);
-    return true;
-  }
+  logDebug('reconnectRealtime called - doing nothing in Demo Mode', null, 'info');
   return false;
 };

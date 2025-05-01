@@ -1,6 +1,7 @@
-
 import RegisterForm from '@/components/auth/RegisterForm';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 const Register = () => {
   return (
@@ -72,7 +73,16 @@ const Register = () => {
             <h1 className="text-2xl font-bold">KonBase</h1>
             <p className="text-muted-foreground">Supply Chain Management</p>
           </div>
-          <RegisterForm />
+
+          <Alert variant="destructive" className="mb-6">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Registration Disabled</AlertTitle>
+            <AlertDescription>
+              User registration is disabled in this demo environment. Please use one of the provided demo accounts on the login page.
+            </AlertDescription>
+          </Alert>
+
+          <RegisterForm isDemoDisabled={true} /> 
         </div>
       </ScrollArea>
     </div>

@@ -19,6 +19,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { logDebug, handleError } from '@/utils/debug';
 import { useAuth } from '@/contexts/auth';
 
+interface RegisterFormProps {
+  isDemoDisabled?: boolean;
+}
+
 const formSchema = z.object({
   name: z.string().min(2, {
     message: 'Name must be at least 2 characters.',
@@ -34,7 +38,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const RegisterForm = () => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ isDemoDisabled = false }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isDiscordLoading, setIsDiscordLoading] = useState(false);
@@ -261,7 +265,7 @@ const RegisterForm = () => {
               <FormItem>
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="John Doe" {...field} />
+                  <Input placeholder="John Doe" {...field} disabled={isDemoDisabled} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -275,7 +279,7 @@ const RegisterForm = () => {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="john@example.com" {...field} />
+                  <Input type="email" placeholder="john@example.com" {...field} disabled={isDemoDisabled} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -289,7 +293,7 @@ const RegisterForm = () => {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" {...field} />
+                  <Input type="password" {...field} disabled={isDemoDisabled} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -303,14 +307,14 @@ const RegisterForm = () => {
               <FormItem>
                 <FormLabel>Invitation Code (Optional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter invitation code if you have one" {...field} />
+                  <Input placeholder="Enter invitation code if you have one" {...field} disabled={isDemoDisabled} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" disabled={isLoading || isDemoDisabled}>
             {isLoading ? (
               <span className="flex items-center">
                 <Spinner className="mr-2" /> Creating account...
@@ -339,7 +343,7 @@ const RegisterForm = () => {
           type="button"
           className="w-full"
           onClick={handleGoogleSignUp}
-          disabled={isGoogleLoading}
+          disabled={isGoogleLoading || isDemoDisabled}
         >
           {isGoogleLoading ? (
             <span className="flex items-center justify-center">
@@ -375,7 +379,7 @@ const RegisterForm = () => {
           type="button"
           className="w-full"
           onClick={handleDiscordSignUp}
-          disabled={isDiscordLoading}
+          disabled={isDiscordLoading || isDemoDisabled}
         >
           {isDiscordLoading ? (
             <span className="flex items-center justify-center">

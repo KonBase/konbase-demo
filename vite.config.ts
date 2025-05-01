@@ -14,6 +14,11 @@ if (!fs.existsSync(logsDir)) {
 }
 const logFilePath = path.resolve(logsDir, 'dev-errors.log');
 
+// Determine base path for GitHub Pages deployment
+// Use environment variable set in the GitHub Actions workflow
+const base = process.env.VITE_BASE_PATH || '/';
+console.log(`Using base path for build: ${base}`); // Log the base path being used
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -68,7 +73,7 @@ export default defineConfig(({ mode }) => ({
       }
     }
   ].filter(Boolean),
-  base: '/',
+  base: base, // Set the base path here
   server: {
     port: 8080,
     host: "::",

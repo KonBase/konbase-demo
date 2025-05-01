@@ -101,6 +101,28 @@ const ProfilePage = () => {
     }
   };
 
+  const renderConventions = () => {
+    if (!conventions || conventions.length === 0) {
+      return <p>No upcoming conventions found.</p>;
+    }
+
+    return conventions.map((conventionAccess) => {
+      const convention = conventionAccess?.conventions;
+
+      return (
+        <div key={conventionAccess?.id || convention?.id}>
+          <h4>{convention?.name ?? 'Convention Name Unavailable'}</h4>
+          <p>
+            Starts: {convention?.start_date ? new Date(convention.start_date).toLocaleDateString() : 'N/A'}
+          </p>
+          <p>
+            Ends: {convention?.end_date ? new Date(convention.end_date).toLocaleDateString() : 'N/A'}
+          </p>
+        </div>
+      );
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 space-y-6">
@@ -210,29 +232,40 @@ const ProfilePage = () => {
                 <table className="w-full table-auto">
                   <tbody>
                     {conventions.map((convention) => {
+                      // Safely access nested convention data
+                      const conventionDetails = convention?.conventions;
+                      const startDate = conventionDetails?.start_date ? new Date(conventionDetails.start_date) : null;
+                      const endDate = conventionDetails?.end_date ? new Date(conventionDetails.end_date) : null;
+                      const now = new Date();
+
                       const status =
-                        new Date() >= new Date(convention.conventions.start_date) &&
-                        new Date() <= new Date(convention.conventions.end_date)
+                        startDate && endDate && now >= startDate && now <= endDate
                           ? 'active'
-                          : new Date() < new Date(convention.conventions.start_date)
+                          : startDate && now < startDate
                           ? 'planned'
-                          : 'completed';
+                          : 'completed'; // Default to completed if dates are missing or in the past
+
+                      const conventionName = conventionDetails?.name ?? 'Unknown Convention';
+                      const conventionLogo = conventionDetails?.logo || ''; // Assuming logo is optional
 
                       return (
                         <tr key={convention.id} className="">
                           <td className="px-4 py-2">
                             <Avatar className="h-10 w-10">
-                              <AvatarImage src={convention.conventions.logo || ''} alt={convention.conventions.name} />
-                              <AvatarFallback>{convention.conventions.name[0]}</AvatarFallback>
+                              {/* Use safe access for logo and name */}
+                              <AvatarImage src={conventionLogo} alt={conventionName} />
+                              <AvatarFallback>{conventionName[0] ?? '?'}</AvatarFallback>
                             </Avatar>
                           </td>
                           <td className="px-4 py-2">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium">{convention.conventions.name}</p>
+                              {/* Use safe access for name */}
+                              <p className="font-medium">{conventionName}</p>
                               {getStatusBadge(status)}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(convention.conventions.start_date).toLocaleDateString()} - {new Date(convention.conventions.end_date).toLocaleDateString()}
+                              {/* Use safe access for dates */}
+                              {startDate ? startDate.toLocaleDateString() : 'N/A'} - {endDate ? endDate.toLocaleDateString() : 'N/A'}
                             </p>
                           </td>
                           <td className="px-4 py-2">

@@ -1,6 +1,7 @@
-
 import LoginForm from '@/components/auth/LoginForm';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 const Login = () => {
   return (
@@ -41,7 +42,7 @@ const Login = () => {
                   <path d="M8 9h8" />
                   <path d="M8 13h5" />
                   <path d="M8 4h8a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
-                  <path d="M8 12h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" />
+                  <path d="M8 12h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8a1 1 0 0 0-1 1v-2a1 1 0 0 0 1-1Z" />
                   <path d="M8 20h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1Z" />
                 </svg>
               </div>
@@ -77,6 +78,22 @@ const Login = () => {
             <h1 className="text-2xl font-bold">KonBase</h1>
             <p className="text-muted-foreground">Supply Chain Management</p>
           </div>
+
+          {/* Demo Account Info */}
+          <Alert variant="default" className="mb-6">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Demo Accounts</AlertTitle>
+            <AlertDescription>
+              Use the following accounts for the demo (password: <code className="font-mono">password123</code>):
+              <ul className="list-disc list-inside mt-1 text-xs">
+                <li><code className="font-mono">admin@konbase.cfd</code> (System Admin)</li>
+                <li><code className="font-mono">manager@konbase.cfd</code> (Manager)</li>
+                <li><code className="font-mono">member@konbase.cfd</code> (Member)</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+          {/* End Demo Account Info */}
+
           <LoginForm />
         </div>
       </ScrollArea>

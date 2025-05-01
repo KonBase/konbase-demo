@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { AuthContextType, AuthState, AuthUser, AuthUserProfile } from './AuthTypes';
-import { supabase } from '@/lib/supabase';
+import { supabase, isMock } from '@/lib/supabase';
+import { mockDb } from '@/lib/mockData';
 import { Session } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/use-toast';
 import { USER_ROLES, UserRoleType } from '@/types/user';
@@ -50,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Listen for auth changes
         const { data: { subscription } } = await supabase.auth.onAuthStateChange(
-          async (session) => {
+          async (_event, session) => {
             if (session?.user) {
               await updateUserState(session);
             } else {
@@ -86,21 +87,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile and update state
   const updateUserState = async (session: Session) => {
     try {
-      // Basic user info from session
       const supabaseUser = session.user;
-      
-      // Fetch user profile from the database
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-        
+      let profile: AuthUserProfile | null = null;
+      let error: any = null;
+
+      if (isMock()) {
+        // --- MOCK MODE ---
+        console.log(`[Mock] Fetching profile for user ${supabaseUser.id}`);
+        profile = mockDb.profiles.getById(supabaseUser.id);
+        if (!profile) {
+           console.warn(`[Mock] Profile not found for user ${supabaseUser.id}. Creating fallback.`);
+           profile = {
+             id: supabaseUser.id,
+             email: supabaseUser.email || 'mock@example.com',
+             name: 'Mock User',
+             role: 'member',
+             created_at: new Date().toISOString(),
+             updated_at: new Date().toISOString(),
+           };
+        } else {
+           console.log(`[Mock] Profile found:`, profile);
+        }
+      } else {
+        // --- REAL MODE ---
+        const { data: fetchedProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
+
+        if (fetchError) error = fetchError;
+        profile = fetchedProfile as AuthUserProfile;
+      }
+
       if (error) throw error;
+      if (!profile) throw new Error("User profile not found.");
 
       // Ensure the role is a valid UserRoleType or default to 'guest'
       const userRole = profile?.role as UserRoleType || 'guest';
-      
+
       // Create extended user object with profile data
       const user: AuthUser = {
         ...supabaseUser,
@@ -109,24 +134,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: userRole,
         email: profile?.email || supabaseUser.email || "",
       };
-      
-      // Save session data for recovery
-      saveSessionData(session);
-      
-      // Update all state at once
-      setState({
+
+      if (!isMock()) {
+        saveSessionData(session);
+      }
+
+      setState(prev => ({
+        ...prev,
         session,
         user,
-        userProfile: profile as AuthUserProfile,
+        userProfile: profile,
         loading: false,
         error: null,
         isAuthenticated: true,
         isLoading: false,
-      });
+      }));
+      console.log(`State updated. Role: ${profile.role}`);
+
     } catch (error: any) {
       console.error("Error getting user profile:", error);
       setState(prev => ({
         ...prev,
+        user: null,
+        userProfile: null,
+        isAuthenticated: false,
         loading: false,
         error: error.message,
         isLoading: false,
@@ -134,8 +165,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Function to manually refresh the user profile
+  const refreshProfile = async () => {
+    if (state.session) {
+      setState(prev => ({ ...prev, loading: true }));
+      try {
+        await updateUserState(state.session);
+      } catch (error) {
+        console.error("Error refreshing profile:", error);
+      } finally {
+         setState(prev => ({ ...prev, loading: false }));
+      }
+    } else {
+      console.warn("Cannot refresh profile: No active session.");
+    }
+  };
+
   // Sign in with email/password
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<void> => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -145,24 +192,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
       
-      // Check email verification
-      if (!data.user?.email_confirmed_at) {
-        // Handle unverified email
-        const verificationError = new Error("Please verify your email before logging in.");
-        verificationError.name = "EmailVerificationError";
-        
-        // Sign the user out
-        await supabase.auth.signOut();
-        
-        throw verificationError;
-      }
-      
-      // Ensure we update the user state immediately after login
       if (data.session) {
         await updateUserState(data.session);
       }
-      
-      return data;
     } catch (error: any) {
       console.error("Error signing in:", error);
       setState(prev => ({ ...prev, loading: false, error: error.message }));
@@ -186,7 +218,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Please check your email to confirm your account.",
       });
       
-      // Redirect or update state as needed
     } catch (error: any) {
       console.error("Error signing up:", error);
       setState(prev => ({ ...prev, loading: false, error: error.message }));
@@ -206,10 +237,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear saved session data
       clearSessionData();
       
-      // Auth state change listener will handle state updates
     } catch (error: any) {
       console.error("Error signing out:", error);
       setState(prev => ({ ...prev, loading: false, error: error.message }));
@@ -223,27 +252,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user has required role
   const hasRole = (requiredRole: UserRoleType): boolean => {
-    // If no user, return false
     if (!state.user || !state.user.role) return false;
     
-    // Get the role levels for comparison
     const userRoleLevel = USER_ROLES[state.user.role as UserRoleType]?.level || 0;
     const requiredRoleLevel = USER_ROLES[requiredRole]?.level || 0;
     
-    // User's role level must be >= required role level
     return userRoleLevel >= requiredRoleLevel;
   };
 
   // Check if user has permission
   const hasPermission = (permission: string): boolean => {
-    // If no user, return false
     if (!state.user || !state.user.role) return false;
     
-    // Get the role definition
     const role = USER_ROLES[state.user.role as UserRoleType];
     if (!role) return false;
     
-    // Check if the role has the permission
     return role.permissions.includes(permission) || role.permissions.includes('admin:all');
   };
 
@@ -252,8 +275,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!state.session) return false;
     
     try {
-      // Here you'd typically make a server request to validate role
-      // For now, we'll use the client-side check
       return hasRole(role);
     } catch (error) {
       console.error("Error checking role access:", error);
@@ -266,28 +287,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!state.isAuthenticated || !state.user) {
       return { success: false, message: 'You must be logged in to perform this action' };
     }
-    
+
+    if (isMock()) {
+       return { success: false, message: 'Super admin elevation via this method is not available in mock mode. Use the RoleGuard elevation.' };
+    }
+
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ role: 'super_admin' })
         .eq('id', state.user.id);
-      
+
       if (error) throw error;
-      
-      // Update local state
-      setState(prev => ({
-        ...prev,
-        user: prev.user ? {
-          ...prev.user,
-          role: 'super_admin' as UserRoleType
-        } : null,
-        userProfile: prev.userProfile ? {
-          ...prev.userProfile,
-          role: 'super_admin' as UserRoleType
-        } : null
-      }));
-      
+
+      await refreshProfile();
+
+      toast({
+        title: "Super Admin Activated",
+        description: "Your privileges have been elevated.",
+      });
+
       return { success: true, message: 'You are now a super admin' };
     } catch (error: any) {
       console.error("Error elevating to super admin:", error);
@@ -299,16 +318,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithOAuth = async (provider: 'google' | 'discord') => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        }
-      });
+      if (isMock()) {
+        // Simulate OAuth sign-in in mock mode
+        toast({
+          title: `${provider} sign in (mock)`,
+          description: `OAuth sign in with ${provider} is not available in mock mode.`,
+          variant: "destructive",
+        });
+        setState(prev => ({ ...prev, loading: false }));
+        return;
+      }
+      // Only call signInWithOAuth if supabase.auth supports it
+      if ('signInWithOAuth' in supabase.auth && typeof supabase.auth.signInWithOAuth === 'function') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: `${window.location.origin}/`,
+          }
+        });
+        if (error) throw error;
+      } else {
+        throw new Error("OAuth sign-in is not supported in the current environment.");
+      }
       
-      if (error) throw error;
-      
-      // The redirect will happen automatically, no need to do anything else here
     } catch (error: any) {
       console.error(`Error signing in with ${provider}:`, error);
       setState(prev => ({ ...prev, loading: false, error: error.message }));
@@ -338,6 +370,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     elevateToSuperAdmin,
+    refreshProfile,
   };
 
   return (

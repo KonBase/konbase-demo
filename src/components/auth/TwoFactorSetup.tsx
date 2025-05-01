@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -6,7 +5,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { Label } from '@/components/ui/label';
 import { Copy, Check, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { supabase, isMock } from '@/lib/supabase';
 import QRCode from 'qrcode';
 import { logDebug } from '@/utils/debug';
 import { isDebugModeEnabled } from '@/utils/debug';
@@ -43,25 +42,40 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
       setErrorMessage(null);
       setSetupError(null);
       setDebugInfo(null);
-      
+      setQrCode(null);
+      setSecret(null);
+
       logDebug("Starting 2FA setup", null, 'info');
-      
-      const { data, error } = await supabase.functions.invoke('generate-totp-secret');
-      
-      if (error) {
-        logDebug("Error generating TOTP secret:", error, 'error');
-        setSetupError(`Error contacting server: ${error.message}`);
-        throw error;
+
+      let generatedSecret: string | null = null;
+      let generatedKeyUri: string | null = null;
+
+      if (isMock()) {
+        logDebug('Using mock secret generation (TwoFactorSetup).');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        generatedSecret = 'MOCKSECRET1234567890';
+        const emailPlaceholder = 'user@example.com';
+        generatedKeyUri = `otpauth://totp/KonBaseDemo:${emailPlaceholder}?secret=${generatedSecret}&issuer=KonBaseDemo`;
+        logDebug('Mock secret generated (TwoFactorSetup).');
+      } else {
+        const { data, error } = await supabase.functions.invoke('generate-totp-secret');
+        if (error) {
+          logDebug("Error generating TOTP secret:", error, 'error');
+          setSetupError(`Error contacting server: ${error.message}`);
+          throw error;
+        }
+        if (data && data.secret) {
+          generatedSecret = data.secret;
+          generatedKeyUri = data.keyUri;
+        }
       }
-      
-      if (data && data.secret) {
-        const { secret, keyUri } = data;
-        setSecret(secret);
-        
-        logDebug('TOTP secret generated successfully', { secretLength: secret.length, keyUri }, 'info');
-        
+
+      if (generatedSecret && generatedKeyUri) {
+        setSecret(generatedSecret);
+        logDebug('TOTP secret generated successfully', { secretLength: generatedSecret.length, keyUri: generatedKeyUri }, 'info');
+
         try {
-          const qrCodeImage = await QRCode.toDataURL(keyUri);
+          const qrCodeImage = await QRCode.toDataURL(generatedKeyUri);
           setQrCode(qrCodeImage);
         } catch (err) {
           logDebug('Error generating QR code:', err, 'error');
@@ -72,6 +86,8 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
             description: "Please try again or use the manual code instead.",
           });
         }
+      } else {
+         throw new Error("Failed to generate secret or key URI.");
       }
     } catch (error: any) {
       console.error('Error setting up 2FA:', error);
@@ -118,45 +134,56 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
       setSetupError(null);
       setVerificationAttempts(prev => prev + 1);
       
-      // Clean up token input
       const cleanToken = verificationCode.trim().replace(/\s/g, '');
-      
-      logDebug("Verifying TOTP", { 
+      let verified = false;
+
+      logDebug("Verifying TOTP (TwoFactorSetup)", { 
         secretLength: secret.length, 
         token: cleanToken, 
         tokenLength: cleanToken.length,
         attempt: verificationAttempts + 1
       }, 'info');
-      
-      const { data, error } = await supabase.functions.invoke('verify-totp', {
-        body: { 
-          secret, 
-          token: cleanToken
+
+      if (isMock()) {
+        logDebug('Using mock code verification (TwoFactorSetup).');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (cleanToken === '123456') {
+          verified = true;
+          logDebug('Mock code verified successfully (TwoFactorSetup).');
+        } else {
+          logDebug('Mock code verification failed (TwoFactorSetup).');
         }
-      });
-      
-      if (error) {
-        logDebug("Verification API error:", error, 'error');
-        setSetupError(`Verification API error: ${error.message}`);
-        throw error;
+        setDebugInfo({ verified: verified, mock: true });
+      } else {
+        const { data, error } = await supabase.functions.invoke('verify-totp', {
+          body: { 
+            secret, 
+            token: cleanToken
+          }
+        });
+
+        if (error) {
+          logDebug("Verification API error:", error, 'error');
+          setSetupError(`Verification API error: ${error.message}`);
+          throw error;
+        }
+
+        logDebug("TOTP verification response", { data }, 'info');
+        setDebugInfo(data);
+        verified = data?.verified;
       }
-      
-      logDebug("TOTP verification response", { data }, 'info');
-      
-      // Store server response for debugging
-      setDebugInfo(data);
-      
-      if (data && data.verified) {
+
+      if (verified) {
         logDebug("TOTP verification successful", null, 'info');
         onVerified(secret);
-        
+
         toast({
           title: "Verification successful",
-          description: "Your verification code is correct. Please save your recovery keys.",
+          description: "Your verification code is correct.",
         });
       } else {
         setVerificationCode('');
-        setSetupError(`Verification failed. Please try a new code. ${data?.error || ''}`);
+        setSetupError(`Verification failed. Please try a new code.`);
         toast({
           variant: "destructive",
           title: "Verification failed",
@@ -178,7 +205,6 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
     }
   };
 
-  // Only auto-verify when manually submitted, not on every change
   const handleManualVerify = () => {
     if (verificationCode.length === 6 && secret) {
       verifyAndEnable();
@@ -189,7 +215,6 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
     setShowDebugInfo(prev => !prev);
   };
 
-  // Auto-start the setup process when the component mounts
   useEffect(() => {
     if (!qrCode && !secret && !isGenerating) {
       startSetup();
@@ -318,7 +343,7 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <Alert variant="warning" className="mb-4">
+              <Alert variant="destructive" className="mb-4">
                 <AlertTitle>Setup failed</AlertTitle>
                 <AlertDescription>
                   {setupError || "Could not generate 2FA setup. Please try again."}

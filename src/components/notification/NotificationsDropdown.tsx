@@ -18,6 +18,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
 import { logDebug, isDebugModeEnabled } from '@/utils/debug';
 import { cn } from '@/lib/utils';
+import { isRealtimeConnected, isMock } from '@/lib/supabase';
+import { mockDb } from '@/lib/mockData';
 
 export function NotificationsDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -37,8 +39,15 @@ export function NotificationsDropdown() {
   const lastFetchTimeRef = useRef<number>(0);
   const fetchDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const websocketTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const componentMountedRef = useRef<boolean>(false);
+  const setupInProgressRef = useRef<boolean>(false);
+  const initialMockFetchDoneRef = useRef<boolean>(false);
 
-  // Track debug mode changes
+  // Refs for callback functions
+  const fetchNotificationsRef = useRef<() => void>(() => {});
+  const setupRealtimeSubscriptionRef = useRef<() => void>(() => {});
+  const cleanupWebSocketConnectionRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     const checkDebugMode = () => {
       const current = isDebugModeEnabled();
@@ -46,49 +55,52 @@ export function NotificationsDropdown() {
         debugModeEnabledRef.current = current;
       }
     };
-    
+
     const intervalId = setInterval(checkDebugMode, 5000);
     return () => clearInterval(intervalId);
   }, []);
-  
+
   const fetchNotifications = useCallback(async (force = false) => {
+    if (isMock() && initialMockFetchDoneRef.current && !force) {
+      logDebug('Skipping repeated notification fetch in mock mode.', null, 'info');
+      if (loading) setLoading(false);
+      return;
+    }
+
     if (!user) {
       setNotifications([]);
       setLoading(false);
       return;
     }
-    
-    // Prevent multiple simultaneous requests
+
     if (isFetchingRef.current && !force) {
       return;
     }
-    
-    // Add cooldown period to prevent rapid subsequent calls
+
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTimeRef.current;
-    const minFetchInterval = 2000; // 2 seconds
-    
+    const minFetchInterval = isRealtimeConnected() ? 15000 : 2000;
+
     if (timeSinceLastFetch < minFetchInterval && !force) {
       if (fetchDebounceTimeoutRef.current) {
         clearTimeout(fetchDebounceTimeoutRef.current);
       }
-      
-      // Debounce the fetch request
+
       fetchDebounceTimeoutRef.current = setTimeout(() => {
         fetchNotifications(true);
       }, minFetchInterval - timeSinceLastFetch);
-      
+
       return;
     }
-    
+
     isFetchingRef.current = true;
     lastFetchTimeRef.current = now;
-    
+
     if (!loading) {
       setLoading(true);
     }
     setError(null);
-    
+
     try {
       const { data, error } = await safeSelect(
         'notifications',
@@ -103,17 +115,15 @@ export function NotificationsDropdown() {
           limit: 10
         }
       );
-      
+
       if (error) {
         if (debugModeEnabledRef.current) {
           logDebug('Error fetching notifications:', error, 'error');
         }
         setError('Unable to load notifications. Please try again later.');
-        
-        // Only attempt retry if we haven't exceeded retry count and if error is likely recoverable
+
         const isNetworkError = error.message?.includes('fetch') || error.details?.includes('fetch');
         if (retryCount < 3 && isNetworkError) {
-          // Exponential backoff with jitter
           const retryDelay = Math.min(2000 * Math.pow(2, retryCount), 10000) + Math.random() * 1000;
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
@@ -123,9 +133,12 @@ export function NotificationsDropdown() {
       } else {
         setNotifications(data || []);
         setError(null);
-        // Reset retry count on success
         if (retryCount > 0) {
           setRetryCount(0);
+        }
+        if (isMock() && !initialMockFetchDoneRef.current) {
+          initialMockFetchDoneRef.current = true;
+          logDebug('Initial notification fetch completed in mock mode.', null, 'info');
         }
       }
     } catch (err) {
@@ -137,238 +150,292 @@ export function NotificationsDropdown() {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [user, safeSelect, retryCount, loading]);
-  
+  }, [user, safeSelect, retryCount]);
+
   const cleanupWebSocketConnection = useCallback(() => {
-    if (channelRef.current && supabase) {
+    if (!channelRef.current || !componentMountedRef.current) {
+      return;
+    }
+
+    logDebug('Attempting to cleanup WebSocket connection...', { channel: !!channelRef.current }, 'info');
+
+    if (supabase) {
       try {
         supabase.removeChannel(channelRef.current);
-        if (debugModeEnabledRef.current) {
-          logDebug('Removed notification channel', null, 'info');
-        }
+        logDebug('Removed notification channel via supabase.removeChannel', null, 'info');
       } catch (error) {
-        if (debugModeEnabledRef.current) {
-          logDebug('Error removing notification channel:', error, 'error');
-        }
+        logDebug('Error removing notification channel:', error, 'error');
       }
-      channelRef.current = null;
     }
-    
-    // Clear any pending WebSocket timeout
+    channelRef.current = null;
+
     if (websocketTimeoutRef.current) {
       clearTimeout(websocketTimeoutRef.current);
       websocketTimeoutRef.current = null;
     }
-    
-    setSubscribed(false);
-    setWebsocketStatus('disconnected');
+
+    if (componentMountedRef.current && !setupInProgressRef.current) {
+      setSubscribed(false);
+      setWebsocketStatus('disconnected');
+      setIsSubscribing(false);
+    }
   }, [supabase]);
-  
+
   const setupRealtimeSubscription = useCallback(() => {
-    if (!user || !supabase || isSubscribing) return;
-    
-    // Add a cooldown between subscription attempts
-    const now = Date.now();
-    const minInterval = 5000; // 5 seconds between attempts
-    if (subscriptionAttemptRef.current > 0 && now - lastFetchTimeRef.current < minInterval) {
+    if (isMock()) {
+      logDebug('Skipping setupRealtimeSubscription in mock mode.', null, 'info');
       return;
     }
     
-    // Clean up any existing subscription 
-    cleanupWebSocketConnection();
-    
-    // Avoid multiple subscriptions in rapid succession
-    const currentAttempt = subscriptionAttemptRef.current + 1;
-    subscriptionAttemptRef.current = currentAttempt;
-    
+    if (!componentMountedRef.current || !user || !supabase || subscribed || isSubscribing || setupInProgressRef.current) {
+      logDebug('Skipping setupRealtimeSubscription', { mounted: componentMountedRef.current, user: !!user, supabase: !!supabase, subscribed, isSubscribing, setupInProgress: setupInProgressRef.current }, 'info');
+      return;
+    }
+
+    setupInProgressRef.current = true;
     setIsSubscribing(true);
     setWebsocketStatus('connecting');
-    
+    logDebug('Starting setupRealtimeSubscription...', null, 'info');
+
+    const now = Date.now();
+    const minInterval = 5000;
+    if (subscriptionAttemptRef.current > 0 && now - lastFetchTimeRef.current < minInterval) {
+      logDebug(`Subscription attempt skipped due to cooldown (attempt ${subscriptionAttemptRef.current + 1})`, null, 'warn');
+      setupInProgressRef.current = false;
+      setIsSubscribing(false);
+      setWebsocketStatus(prev => prev === 'connecting' ? 'disconnected' : prev);
+      return;
+    }
+
+    if (channelRef.current) {
+      cleanupWebSocketConnectionRef.current();
+    }
+
+    const currentAttempt = subscriptionAttemptRef.current + 1;
+    subscriptionAttemptRef.current = currentAttempt;
+
     try {
-      // Create new subscription with a unique channel name to avoid conflicts
       const channelName = `notifications-changes-${user.id}-${currentAttempt}-${Date.now()}`;
-      
-      // Set WebSocket connection timeout
+      logDebug(`Creating channel: ${channelName}`, null, 'info');
+
+      if (websocketTimeoutRef.current) clearTimeout(websocketTimeoutRef.current);
       websocketTimeoutRef.current = setTimeout(() => {
-        if (isSubscribing && websocketStatus === 'connecting') {
-          setWebsocketStatus('error');
-          setIsSubscribing(false);
-          if (debugModeEnabledRef.current) {
-            logDebug(`WebSocket connection timeout (attempt ${currentAttempt})`, null, 'error');
+        if (!componentMountedRef.current || subscriptionAttemptRef.current !== currentAttempt || websocketStatus !== 'connecting') return;
+
+        setWebsocketStatus('error');
+        setIsSubscribing(false);
+        setupInProgressRef.current = false;
+        logDebug(`WebSocket connection timeout (attempt ${currentAttempt})`, null, 'error');
+
+        const retryDelay = Math.min(5000 * Math.pow(1.5, Math.min(subscriptionAttemptRef.current, 5)), 30000);
+        setTimeout(() => {
+          if (componentMountedRef.current && subscriptionAttemptRef.current === currentAttempt) {
+            setupRealtimeSubscriptionRef.current();
           }
-          
-          // Retry after a delay with exponential backoff
-          const retryDelay = Math.min(5000 * Math.pow(1.5, Math.min(subscriptionAttemptRef.current, 5)), 30000);
+        }, 10000);
+      }, 10000);
+
+      const channel = supabase.channel(channelName);
+
+      channel.on(
+        {
+          event: 'postgres_changes',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          if (!componentMountedRef.current || subscriptionAttemptRef.current !== currentAttempt) return;
+
+          try {
+            const newNotification = payload.new as Notification;
+            if (!newNotification) {
+              logDebug('Received notification payload without "new" property', payload, 'warn');
+              return;
+            }
+            logDebug('Received new notification via WebSocket', newNotification, 'info');
+            setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
+
+            toast({
+              title: newNotification.title,
+              description: newNotification.message,
+            });
+          } catch (error: any) {
+            logDebug('Error processing notification update:', error, 'error');
+          }
+        }
+      )
+      .subscribe((status: any, err?: any) => {
+        if (websocketTimeoutRef.current) {
+          clearTimeout(websocketTimeoutRef.current);
+          websocketTimeoutRef.current = null;
+        }
+
+        if (!componentMountedRef.current || subscriptionAttemptRef.current !== currentAttempt) return;
+
+        const statusString = String(status);
+        logDebug(`Subscription status update (attempt ${currentAttempt}): ${statusString}`, err || null, statusString.startsWith('CHANNEL_ERROR') || statusString === 'TIMED_OUT' ? 'error' : 'info');
+
+        if (statusString === 'SUBSCRIBED') {
+          setSubscribed(true);
+          setIsSubscribing(false);
+          setWebsocketStatus('connected');
+          setupInProgressRef.current = false;
+          logDebug(`Successfully subscribed to notifications (attempt ${currentAttempt})`, null, 'info');
+
+          const timeSinceLastFetch: number = Date.now() - lastFetchTimeRef.current;
+          if (!isMock() || timeSinceLastFetch > 30000) {
+            fetchNotificationsRef.current();
+          }
+        } else if (statusString === 'CHANNEL_ERROR' || statusString === 'TIMED_OUT') {
+          setSubscribed(false);
+          setIsSubscribing(false);
+          setWebsocketStatus('error');
+          setupInProgressRef.current = false;
+
+          const retryDelay: number = statusString === 'TIMED_OUT' ? 8000 : Math.min(5000 * Math.pow(1.5, Math.min(subscriptionAttemptRef.current, 5)), 30000);
           setTimeout(() => {
-            if (subscriptionAttemptRef.current === currentAttempt) {
-              setupRealtimeSubscription();
+            if (componentMountedRef.current && subscriptionAttemptRef.current === currentAttempt) {
+              setupRealtimeSubscriptionRef.current();
             }
           }, retryDelay);
-        }
-      }, 10000); // 10-second timeout for WebSocket connection
-      
-      const channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT', 
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            // Only process if this is still the current subscription attempt
-            if (subscriptionAttemptRef.current !== currentAttempt) return;
-            
-            try {
-              const newNotification = payload.new as Notification;
-              setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
-              
-              toast({
-                title: newNotification.title,
-                description: newNotification.message,
-              });
-            } catch (error) {
-              if (debugModeEnabledRef.current) {
-                logDebug('Error processing notification update:', error, 'error');
-              }
-            }
-          }
-        )
-        .on('system', { event: 'disconnect' }, () => {
+        } else if (statusString === 'CLOSED') {
+          setSubscribed(false);
+          setIsSubscribing(false);
           setWebsocketStatus('disconnected');
-          if (debugModeEnabledRef.current) {
-            logDebug(`WebSocket disconnected (attempt ${currentAttempt})`, null, 'warn');
-          }
-
-          // Try to reconnect after a delay
+          setupInProgressRef.current = false;
+          logDebug(`Subscription closed (attempt ${currentAttempt})`, null, 'warn');
           setTimeout(() => {
-            if (subscriptionAttemptRef.current === currentAttempt) {
-              setupRealtimeSubscription();
+            if (componentMountedRef.current && subscriptionAttemptRef.current === currentAttempt) {
+              logDebug(`Attempting reconnect after CLOSED status (attempt ${currentAttempt})`, null, 'info');
+              setupRealtimeSubscriptionRef.current();
             }
-          }, 5000); // 5-second delay before reconnection attempt
-        })
-        .subscribe((status) => {
-          // Clear the WebSocket timeout
-          if (websocketTimeoutRef.current) {
-            clearTimeout(websocketTimeoutRef.current);
-            websocketTimeoutRef.current = null;
-          }
-          
-          // Only process if this is still the current subscription attempt
-          if (subscriptionAttemptRef.current !== currentAttempt) return;
-          
-          if (status === 'SUBSCRIBED') {
-            setSubscribed(true);
-            setIsSubscribing(false);
-            setWebsocketStatus('connected');
-            if (debugModeEnabledRef.current) {
-              logDebug(`Successfully subscribed to notifications (attempt ${currentAttempt})`, null, 'info');
-            }
-          } else if (status === 'CHANNEL_ERROR') {
-            setSubscribed(false);
-            setIsSubscribing(false);
-            setWebsocketStatus('error');
-            if (debugModeEnabledRef.current) {
-              logDebug(`Error subscribing to notifications (attempt ${currentAttempt})`, null, 'error');
-            }
-            
-            // Try to resubscribe after a delay with exponential backoff
-            const retryDelay = Math.min(5000 * Math.pow(1.5, Math.min(subscriptionAttemptRef.current, 5)), 30000);
-            setTimeout(() => {
-              if (subscriptionAttemptRef.current === currentAttempt) {
-                setupRealtimeSubscription();
-              }
-            }, retryDelay);
-          } else if (status === 'TIMED_OUT') {
-            setSubscribed(false);
-            setIsSubscribing(false);
-            setWebsocketStatus('error');
-            if (debugModeEnabledRef.current) {
-              logDebug(`Subscription timed out (attempt ${currentAttempt})`, null, 'error');
-            }
-            
-            // Try to resubscribe after a delay
-            setTimeout(() => {
-              if (subscriptionAttemptRef.current === currentAttempt) {
-                setupRealtimeSubscription();
-              }
-            }, 8000); // 8-second delay before reconnection attempt
-          }
-        });
-        
-      // Store channel reference for cleanup
+          }, 5000);
+        }
+      });
+
       channelRef.current = channel;
-    } catch (error) {
-      if (debugModeEnabledRef.current) {
-        logDebug(`Error setting up notification subscription (attempt ${currentAttempt}):`, error, 'error');
-      }
+    } catch (error: any) {
+      if (!componentMountedRef.current) return;
+      logDebug(`Error setting up notification subscription (attempt ${currentAttempt}):`, error, 'error');
       setSubscribed(false);
       setIsSubscribing(false);
       setWebsocketStatus('error');
-      
-      // Clear any pending WebSocket timeout
+      setupInProgressRef.current = false;
+
       if (websocketTimeoutRef.current) {
         clearTimeout(websocketTimeoutRef.current);
         websocketTimeoutRef.current = null;
       }
     }
-  }, [user, supabase, toast, cleanupWebSocketConnection, websocketStatus]);
-  
-  // Set up initial subscription and fetch notifications
+  }, [user, supabase, toast, subscribed, isSubscribing]);
+
   useEffect(() => {
-    // Only fetch if user is logged in and component is mounted
-    if (user) {
-      fetchNotifications();
+    fetchNotificationsRef.current = fetchNotifications;
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    setupRealtimeSubscriptionRef.current = setupRealtimeSubscription;
+  }, [setupRealtimeSubscription]);
+
+  useEffect(() => {
+    cleanupWebSocketConnectionRef.current = cleanupWebSocketConnection;
+  }, [cleanupWebSocketConnection]);
+
+  useEffect(() => {
+    componentMountedRef.current = true;
+    if (isMock()) {
+      initialMockFetchDoneRef.current = false;
     }
-    
-    // Only attempt to set up subscription if we have the required dependencies
-    if (user && supabase && !isSubscribing && !subscribed) {
-      // Add a small delay before initial subscription to prevent rapid setup on mount
-      const initialDelay = 1000; // 1 second
-      const timeoutId = setTimeout(() => {
-        setupRealtimeSubscription();
-      }, initialDelay);
-      
-      return () => clearTimeout(timeoutId);
+
+    if (user && supabase) {
+      logDebug('User/Supabase available, fetching notifications and setting up subscription.', null, 'info');
+      fetchNotificationsRef.current();
+
+      if (!subscribed && !isSubscribing) {
+        const initialDelay = isMock() ? 1500 : 500;
+        const timeoutId = setTimeout(() => {
+          if (componentMountedRef.current) {
+            setupRealtimeSubscriptionRef.current();
+          }
+        }, initialDelay);
+        return () => clearTimeout(timeoutId);
+      }
+    } else {
+      logDebug('User or Supabase not available, skipping initial fetch/subscription.', null, 'info');
+      setLoading(false);
     }
-    
+
     return () => {
+      logDebug('Main useEffect cleanup running.', null, 'info');
+      componentMountedRef.current = false;
       if (fetchDebounceTimeoutRef.current) {
         clearTimeout(fetchDebounceTimeoutRef.current);
         fetchDebounceTimeoutRef.current = null;
       }
-      
-      cleanupWebSocketConnection();
-      // Reset attempts to prevent further subscription attempts
+      cleanupWebSocketConnectionRef.current();
       subscriptionAttemptRef.current = 0;
+      setupInProgressRef.current = false;
     };
-  }, [user, fetchNotifications, supabase, setupRealtimeSubscription, isSubscribing, subscribed, cleanupWebSocketConnection]);
-  
-  // Resubscribe when retryCount changes
+  }, [user, supabase, subscribed, isSubscribing]);
+
   useEffect(() => {
-    if (retryCount > 0 && user && supabase && !isSubscribing && websocketStatus !== 'connected') {
-      // Add delay before resubscribing
-      const retryDelay = 3000 + (retryCount * 1000); // Increasing delay with retry count
-      const timeoutId = setTimeout(() => {
-        setupRealtimeSubscription();
-      }, retryDelay);
-      
-      return () => clearTimeout(timeoutId);
+    if (retryCount > 0 && componentMountedRef.current) {
+      logDebug(`Retry attempt ${retryCount} triggered.`, null, 'info');
+      fetchNotificationsRef.current();
+
+      if (user && supabase && !subscribed && !isSubscribing) {
+        logDebug('Retrying WebSocket connection due to retry count change.', null, 'info');
+        const retryDelay = 1000 + (retryCount * 500);
+        const timeoutId = setTimeout(() => {
+          if (componentMountedRef.current) {
+            setupRealtimeSubscriptionRef.current();
+          }
+        }, retryDelay);
+        return () => clearTimeout(timeoutId);
+      }
     }
-  }, [retryCount, user, supabase, setupRealtimeSubscription, isSubscribing, websocketStatus]);
-  
+  }, [retryCount]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (!componentMountedRef.current) return;
+
+      logDebug('Browser online event detected.', { subscribed, isSubscribing }, 'info');
+
+      const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
+      if (isMock() && timeSinceLastFetch < 10000) {
+        logDebug('Ignoring online event due to recent activity (mock env)', null, 'info');
+        return;
+      }
+
+      if (!subscribed && user && supabase && !isSubscribing) {
+        logDebug('Network connection possibly restored, attempting WebSocket reconnect.', null, 'info');
+        const reconnectDelay = 3000;
+        const timeoutId = setTimeout(() => {
+          if (componentMountedRef.current) {
+            setupRealtimeSubscriptionRef.current();
+          }
+        }, reconnectDelay);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [subscribed, user, supabase, isSubscribing]);
+
   const markAsRead = async (id: string) => {
     if (!user) return;
-    
+
     try {
       const { error } = await safeUpdate(
         'notifications',
         { read: true },
         { column: 'id', value: id }
       );
-      
+
       if (error) {
         if (debugModeEnabledRef.current) {
           logDebug('Error marking notification as read:', error, 'error');
@@ -380,9 +447,9 @@ export function NotificationsDropdown() {
         });
         return;
       }
-      
-      setNotifications(prev => 
-        prev.map(notification => 
+
+      setNotifications(prev =>
+        prev.map(notification =>
           notification.id === id ? { ...notification, read: true } : notification
         )
       );
@@ -397,27 +464,27 @@ export function NotificationsDropdown() {
       });
     }
   };
-  
+
   const markAllAsRead = async () => {
     if (!user) return;
-    
+
     try {
       const unreadIds = notifications
         .filter(n => !n.read)
         .map(n => n.id);
-        
+
       if (unreadIds.length === 0) return;
-      
-      const updatePromises = unreadIds.map(id => 
+
+      const updatePromises = unreadIds.map(id =>
         safeUpdate('notifications', { read: true }, { column: 'id', value: id })
       );
-      
+
       const results = await Promise.allSettled(updatePromises);
-      const hasErrors = results.some(result => 
-        result.status === 'rejected' || 
+      const hasErrors = results.some(result =>
+        result.status === 'rejected' ||
         (result.status === 'fulfilled' && result.value.error)
       );
-      
+
       if (hasErrors) {
         toast({
           title: "Warning",
@@ -425,10 +492,10 @@ export function NotificationsDropdown() {
           variant: "destructive"
         });
       } else {
-        setNotifications(prev => 
+        setNotifications(prev =>
           prev.map(notification => ({ ...notification, read: true }))
         );
-        
+
         toast({
           title: "All notifications marked as read",
         });
@@ -444,30 +511,10 @@ export function NotificationsDropdown() {
       });
     }
   };
-  
+
   const unreadCount = notifications.filter(n => !n.read).length;
-  const isMobile = window.innerWidth < 768; // Simple mobile detection
-  
-  // Add window online/offline event listeners to retry WebSocket when reconnecting
-  useEffect(() => {
-    const handleOnline = () => {
-      if (!subscribed && user && supabase) {
-        if (debugModeEnabledRef.current) {
-          logDebug('Network connection restored, reconnecting WebSocket', null, 'info');
-        }
-        // Wait a bit for the connection to stabilize then reconnect
-        setTimeout(() => {
-          setupRealtimeSubscription();
-        }, 3000);
-      }
-    };
-    
-    window.addEventListener('online', handleOnline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [subscribed, user, supabase, setupRealtimeSubscription]);
-  
+  const isMobile = window.innerWidth < 768;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -485,41 +532,37 @@ export function NotificationsDropdown() {
           <span>Notifications</span>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="text-xs h-7"
                 onClick={markAllAsRead}
               >
                 Mark all as read
               </Button>
             )}
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
               className="h-7 w-7"
               onClick={() => {
-                // Force refresh but ensure we're not in a loading state
-                if (!loading && !isFetchingRef.current) {
-                  setRetryCount(0);
-                  fetchNotifications(true); // Pass true to force fetch
-                  
-                  // Always attempt to reconnect WebSocket if not already connected
-                  if (websocketStatus !== 'connected' && !isSubscribing) {
-                    setupRealtimeSubscription();
-                  }
+                if (!loading && !isFetchingRef.current && !isSubscribing) {
+                  logDebug('Manual refresh triggered.', null, 'info');
+                  setRetryCount(prev => prev + 1);
                 }
               }}
-              title={websocketStatus === 'connected' ? 
-                "Connected. Click to refresh" : 
-                websocketStatus === 'error' ? 
-                  "Connection error. Click to retry" : 
-                  "Refreshing..."}
-              disabled={loading || isFetchingRef.current}
+              title={
+                isSubscribing ? "Connecting..." :
+                  websocketStatus === 'connected' ? "Connected. Click to refresh" :
+                    websocketStatus === 'error' ? "Connection error. Click to retry" :
+                      websocketStatus === 'connecting' ? "Connecting..." :
+                        "Click to refresh"
+              }
+              disabled={loading || isFetchingRef.current || isSubscribing}
             >
               <RefreshCw className={cn(
-                "h-4 w-4", 
-                loading && "animate-spin",
+                "h-4 w-4",
+                (loading || isFetchingRef.current || isSubscribing) && "animate-spin",
                 websocketStatus === 'error' && "text-red-500",
                 websocketStatus === 'connecting' && "text-amber-500"
               )} />
@@ -527,23 +570,21 @@ export function NotificationsDropdown() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        
-        {/* Show WebSocket connection status if in error state */}
+
         {websocketStatus === 'error' && (
           <div className="px-4 py-2 text-xs text-red-500 flex items-center gap-2 bg-red-50 dark:bg-red-950/20">
             <span className="inline-block w-2 h-2 rounded-full bg-red-500"></span>
             <span>
-              Real-time updates unavailable. 
-              <Button variant="link" className="p-0 h-auto text-xs" onClick={setupRealtimeSubscription}>
+              Real-time updates unavailable.
+              <Button variant="link" className="p-0 h-auto text-xs ml-1" onClick={() => setRetryCount(prev => prev + 1)} disabled={isSubscribing}>
                 Retry connection
               </Button>
             </span>
           </div>
         )}
-        
+
         <DropdownMenuGroup className={cn("overflow-y-auto", isMobile ? "max-h-[50vh]" : "max-h-[400px]")}>
-          {/* Existing notification list rendering code */}
-          {loading ? (
+          {loading && notifications.length === 0 ? (
             <div className="p-4 text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
               <p className="mt-2 text-sm text-muted-foreground">Loading notifications...</p>
@@ -551,15 +592,12 @@ export function NotificationsDropdown() {
           ) : error ? (
             <div className="p-4 text-center">
               <p className="text-sm text-muted-foreground">{error}</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="mt-2"
-                onClick={() => {
-                  setRetryCount(0);
-                  fetchNotifications(true);
-                  setupRealtimeSubscription();
-                }}
+                onClick={() => setRetryCount(prev => prev + 1)}
+                disabled={isSubscribing}
               >
                 Retry
               </Button>
@@ -570,33 +608,40 @@ export function NotificationsDropdown() {
             </div>
           ) : (
             notifications.map((notification) => (
-              <DropdownMenuItem 
-                key={notification.id} 
+              <DropdownMenuItem
+                key={notification.id}
                 className={`flex flex-col items-start p-3 ${notification.read ? 'opacity-70' : 'bg-muted/50'}`}
+                onSelect={(e) => e.preventDefault()}
               >
                 <div className="flex w-full justify-between items-start">
                   <div className="font-medium text-sm">{notification.title}</div>
                   {!notification.read && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6"
-                      onClick={() => markAsRead(notification.id)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 flex-shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(notification.id);
+                      }}
+                      aria-label="Mark as read"
                     >
                       <Check className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
-                {notification.link && (
-                  <Link 
-                    to={notification.link} 
-                    className="text-xs text-primary mt-1"
-                    onClick={() => markAsRead(notification.id)}
+                <p className="text-xs text-muted-foreground mt-1 whitespace-normal">{notification.message}</p>
+                {notification.link ? (
+                  <Link
+                    to={notification.link}
+                    className="text-xs text-primary mt-1 hover:underline"
+                    onClick={() => {
+                      if (!notification.read) markAsRead(notification.id);
+                    }}
                   >
                     View details
                   </Link>
-                )}
+                ) : null}
                 <p className="text-xs text-muted-foreground mt-2">
                   {new Date(notification.created_at).toLocaleString()}
                 </p>
