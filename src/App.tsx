@@ -103,7 +103,7 @@ function App() {
 
   const handleAcceptCookie = () => {
     if (typeof window !== 'undefined' && typeof clarity !== 'undefined') {
-      clarity.init("rehldxoogv");
+      clarity.init("reid6zycx7");
       // Signal consent to Clarity for GDPR/CCPA compliance
       clarity.consent(); 
       console.log("Clarity initialized and consent signaled.");
