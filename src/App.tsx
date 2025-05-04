@@ -11,6 +11,9 @@ import { RoleGuard } from './components/auth/RoleGuard'; // Use named import for
 import { UserRoleType } from '@/types/user';
 import { isConfigured } from '@/lib/config-store';
 import { useEffect } from 'react';
+import CookieConsent from "react-cookie-consent";
+import clarity from '@microsoft/clarity';
+import { Link } from 'react-router-dom';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -97,6 +100,20 @@ function App() {
     isConfigured();
 
   }, []); // Run only once on mount
+
+  const handleAcceptCookie = () => {
+    if (typeof window !== 'undefined' && typeof clarity !== 'undefined') {
+      clarity.init("rehldxoogv");
+      // Signal consent to Clarity for GDPR/CCPA compliance
+      clarity.consent(); 
+      console.log("Clarity initialized and consent signaled.");
+    }
+  };
+
+  const handleDeclineCookie = () => {
+    // Optional: Handle decline logic if needed, e.g., remove existing cookies
+    console.log("Cookie consent declined.");
+  };
 
   return (
     <ErrorBoundary>
@@ -227,6 +244,36 @@ function App() {
                 <Route path="*" element={<NotFound />} />
 
               </Routes>
+              <CookieConsent
+              location="bottom" // This prop might conflict with fixed positioning, but react-cookie-consent might handle it.
+              buttonText="Accept"
+              declineButtonText="Decline"
+              cookieName="konbaseUserConsent" 
+              
+              // Apply Tailwind classes via specific props for styling and animation
+              containerClasses="fixed inset-x-0 bottom-0 z-[9999] border-t border-border bg-background text-foreground shadow-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-bottom-5 duration-500 ease-out" 
+              contentClasses="flex-grow text-sm text-center md:text-left mb-2 md:mb-0"
+              // Use shadcn/ui button styles via Tailwind classes
+              buttonClasses="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full md:w-auto"
+              declineButtonClasses="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/90 h-9 px-4 py-2 w-full md:w-auto mt-2 md:mt-0 md:ml-2" 
+
+              // Remove inline styles, colors are handled by Tailwind classes now
+              expires={150}
+              enableDeclineButton
+              onAccept={handleAcceptCookie}
+              onDecline={handleDeclineCookie}
+              ariaAcceptLabel="Accept cookies"
+              ariaDeclineLabel="Decline cookies"
+            >
+              This website uses cookies to enhance the user experience and analyze site traffic using Microsoft Clarity. By clicking "Accept", you consent to the use of these cookies. You can learn more in our{" "}
+              <Link 
+                to="https://konbase.cfd/privacy-policy#cookies" 
+                // Apply Tailwind classes directly to the Link
+                className="font-medium text-primary underline underline-offset-4 hover:no-underline" // Adjusted link style slightly
+              >
+                Privacy Policy
+              </Link>.
+            </CookieConsent>
             </AssociationProvider>
           </AuthProvider>
           <Toaster />

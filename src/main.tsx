@@ -1,8 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, HashRouter } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Link } from 'react-router-dom';
 import App from './App';
 import './index.css';
+
+// Extend the Window interface to include clarity
+declare global {
+  interface Window {
+    clarity?: (...args: any[]) => void;
+  }
+}
 
 // Determine if we're running on GitHub Pages
 const isGitHubPages = window.location.hostname.includes('github.io');
