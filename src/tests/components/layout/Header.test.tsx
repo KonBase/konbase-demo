@@ -61,7 +61,7 @@ describe('Header', () => {
     }));
   });
 
-  it('renders basic elements when no association selected', () => {
+  it('renders basic elements when no association selected', async () => {
     render(<Header />);
     expect(screen.getByTestId('mobile-nav')).toBeInTheDocument();
     expect(screen.getByTestId('assoc-selector')).toBeInTheDocument();
@@ -75,17 +75,18 @@ describe('Header', () => {
     expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
   });
 
-  it('renders association name and search when association is selected', () => {
+  it('renders association name and search when association is selected', async () => {
     vi.doMock('@/contexts/AssociationContext', () => ({
       useAssociation: () => ({ currentAssociation: { id: 'a1', name: 'Test Association' } }),
     }));
-    const HeaderReloaded = require('@/components/layout/Header').Header;
+    vi.resetModules();
+    const HeaderReloaded = (await import('@/components/layout/Header')).Header;
     render(<HeaderReloaded />);
     expect(screen.getByText('Test Association')).toBeInTheDocument();
     expect(screen.getByTestId('global-search')).toBeInTheDocument();
   });
 
-  it('renders back button on non-dashboard page with association', () => {
+  it('renders back button on non-dashboard page with association', async () => {
     vi.doMock('@/contexts/AssociationContext', () => ({
       useAssociation: () => ({ currentAssociation: { id: 'a1', name: 'Test Association' } }),
     }));
@@ -93,24 +94,26 @@ describe('Header', () => {
       useLocation: () => ({ pathname: '/inventory/items' }), // Non-dashboard path
       useNavigate: () => mockNavigate,
     }));
-    const HeaderReloaded = require('@/components/layout/Header').Header;
+    vi.resetModules();
+    const HeaderReloaded = (await import('@/components/layout/Header')).Header;
     render(<HeaderReloaded />);
-    const backButton = screen.getByRole('button'); // More specific selector might be needed
+    const backButton = screen.getByRole('button', { name: /back/i });
     expect(backButton).toBeInTheDocument(); // Check if a button exists (likely the back button)
     fireEvent.click(backButton);
     expect(mockHistoryBack).toHaveBeenCalled();
   });
 
-  it('passes isAdmin=true to UserMenu for admin role', () => {
+  it('passes isAdmin=true to UserMenu for admin role', async () => {
     vi.doMock('@/hooks/useUserProfile', () => ({
       useUserProfile: () => ({ profile: { role: 'admin', name: 'Admin User', profile_image: null } }),
     }));
-    const HeaderReloaded = require('@/components/layout/Header').Header;
+    vi.resetModules();
+    const HeaderReloaded = (await import('@/components/layout/Header')).Header;
     render(<HeaderReloaded />);
     expect(screen.getByTestId('user-menu')).toHaveAttribute('data-isadmin', 'true');
   });
 
-  it('passes isAdmin=false to UserMenu for member role', () => {
+  it('passes isAdmin=false to UserMenu for member role', async () => {
      // Default mock already sets role to 'member'
      render(<Header />);
      expect(screen.getByTestId('user-menu')).toHaveAttribute('data-isadmin', 'false');

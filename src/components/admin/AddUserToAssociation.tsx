@@ -100,7 +100,7 @@ export function AddUserToAssociation({ associationId, onUserAdded }: AddUserToAs
               value={role}
               onValueChange={(value) => setRole(value as UserRoleType)}
             >
-              <SelectTrigger>
+              <SelectTrigger id="role">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>

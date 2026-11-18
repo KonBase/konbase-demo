@@ -38,6 +38,6 @@ describe('AssociationSelector', () => {
   it('shows popover on click', () => {
     render(<AssociationSelector />);
     fireEvent.click(screen.getByRole('combobox'));
-    expect(screen.getByText(/Test Association/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Test Association/).length).toBeGreaterThan(1); // trigger + list option
   });
 });

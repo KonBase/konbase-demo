@@ -18,7 +18,7 @@ describe('InviteCodeDialog', () => {
       />
     );
     fireEvent.change(screen.getByPlaceholderText(/invitation code/i), { target: { value: 'CODE123' } });
-    fireEvent.click(screen.getByText(/Join Association/i));
+    fireEvent.click(screen.getByRole('button', { name: /Join Association/i }));
     expect(onAccept).toHaveBeenCalledWith('CODE123');
   });
 

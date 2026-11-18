@@ -2,7 +2,11 @@ import { mockDb } from './mockData';
 import { UserRoleType } from '@/types/user';
 
 // --- Mock Auth State ---
-let mockSession: any = null; // Store the current mock session
+const SESSION_KEY = 'konbase_mock_session';
+// Keep the demo login across page reloads and deep links (sessionStorage = per tab)
+const loadSession = () => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } };
+const persistSession = () => { try { mockSession ? sessionStorage.setItem(SESSION_KEY, JSON.stringify(mockSession)) : sessionStorage.removeItem(SESSION_KEY); } catch { /* storage unavailable */ } };
+let mockSession: any = loadSession(); // Store the current mock session
 
 // --- Mock Query Builder ---
 // This simulates the chainable query builder (.select, .insert, .update, .delete, .eq, .or, .in, .limit, .order, .single)
@@ -279,6 +283,7 @@ export const mockSupabase = {
                     token_type: 'bearer',
                 };
                  mockDb.audit_logs.insert({ action: 'login', entity: 'auth', entity_id: user.id, user_id: user.id, changes: { method: 'password' } });
+                persistSession();
                 return { data: { session: mockSession }, error: null };
             } else {
                 return { data: { session: null }, error: { message: 'Invalid login credentials', status: 400 } };
@@ -319,6 +324,7 @@ export const mockSupabase = {
                  mockDb.audit_logs.insert({ action: 'logout', entity: 'auth', entity_id: userId, user_id: userId });
             }
             mockSession = null;
+            persistSession();
             // Trigger auth state change listeners if the app uses them
             mockSupabase.auth.onAuthStateChangeCallback?.( 'SIGNED_OUT', null);
             return { error: null };
@@ -382,6 +388,7 @@ export const mockSupabase = {
                  };
                  mockSupabase.auth.onAuthStateChangeCallback?.('SIGNED_IN', mockSession);
              }
+             persistSession();
              return { data: { session: mockSession, user: mockSession?.user }, error: null };
         },
 
@@ -421,6 +428,7 @@ export const mockSupabase = {
                      /* ... */
                  };
                  mockSupabase.auth.onAuthStateChangeCallback?.('SIGNED_IN', mockSession);
+                 persistSession();
                  return { data: { session: mockSession, user: mockSession?.user }, error: null };
              }
              return { data: {}, error: { message: 'Invalid OTP', status: 400 } };

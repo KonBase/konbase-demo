@@ -27,13 +27,13 @@ describe('JoinConventionForm', () => {
   it('renders input and buttons', () => {
     render(<JoinConventionForm />);
     expect(screen.getByLabelText(/Invitation Code/i)).toBeInTheDocument();
-    expect(screen.getByText(/Join Convention/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Join Convention/i })).toBeInTheDocument();
     expect(screen.getByText(/Cancel/i)).toBeInTheDocument();
   });
 
   it('shows error if code is empty', () => {
     render(<JoinConventionForm />);
-    fireEvent.click(screen.getByText(/Join Convention/i));
-    expect(screen.getByText(/Join Convention/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Join Convention/i }));
+    expect(screen.getByRole('button', { name: /Join Convention/i })).toBeInTheDocument();
   });
 });

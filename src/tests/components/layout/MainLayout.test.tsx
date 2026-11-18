@@ -32,24 +32,25 @@ describe('MainLayout', () => {
     }));
   });
 
-  it('renders Header, Outlet, and DashboardFooter for authenticated user on dashboard', () => {
+  it('renders Header, Outlet, and DashboardFooter for authenticated user on dashboard', async () => {
     render(<MainLayout />);
     expect(screen.getByTestId('header')).toBeInTheDocument();
     expect(screen.getByTestId('outlet')).toBeInTheDocument();
     expect(screen.getByTestId('dashboard-footer')).toBeInTheDocument();
   });
 
-  it('shows loading indicator when loading', () => {
+  it('shows loading indicator when loading', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({ user: null, loading: true }),
     }));
-    const MainLayoutReloaded = require('@/components/layout/MainLayout').default;
+    vi.resetModules();
+    const MainLayoutReloaded = (await import('@/components/layout/MainLayout')).default;
     render(<MainLayoutReloaded />);
     expect(screen.getByRole('progressbar')).toBeInTheDocument(); // Assuming spinner has role progressbar
     expect(screen.queryByTestId('header')).not.toBeInTheDocument();
   });
 
-  it('redirects unauthenticated user to /login for protected route', () => {
+  it('redirects unauthenticated user to /login for protected route', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({ user: null, loading: false }),
     }));
@@ -59,12 +60,13 @@ describe('MainLayout', () => {
       useNavigate: () => mockNavigate,
       useLocation: () => ({ pathname: '/some-protected-page' }),
     }));
-    const MainLayoutReloaded = require('@/components/layout/MainLayout').default;
+    vi.resetModules();
+    const MainLayoutReloaded = (await import('@/components/layout/MainLayout')).default;
     render(<MainLayoutReloaded />);
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 
-  it('does NOT redirect unauthenticated user on public route (/login)', () => {
+  it('does NOT redirect unauthenticated user on public route (/login)', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({ user: null, loading: false }),
     }));
@@ -73,7 +75,8 @@ describe('MainLayout', () => {
       useNavigate: () => mockNavigate,
       useLocation: () => ({ pathname: '/login' }),
     }));
-    const MainLayoutReloaded = require('@/components/layout/MainLayout').default;
+    vi.resetModules();
+    const MainLayoutReloaded = (await import('@/components/layout/MainLayout')).default;
     render(<MainLayoutReloaded />);
     expect(mockNavigate).not.toHaveBeenCalled();
     // Should still render layout parts for public pages if designed that way
@@ -81,26 +84,28 @@ describe('MainLayout', () => {
     expect(screen.getByTestId('outlet')).toBeInTheDocument();
   });
 
-   it('hides Header on /profile page', () => {
+   it('hides Header on /profile page', async () => {
      vi.doMock('react-router-dom', () => ({
        Outlet: () => <div data-testid="outlet">Outlet Content</div>,
        useNavigate: () => mockNavigate,
        useLocation: () => ({ pathname: '/profile' }),
      }));
-     const MainLayoutReloaded = require('@/components/layout/MainLayout').default;
+     vi.resetModules();
+     const MainLayoutReloaded = (await import('@/components/layout/MainLayout')).default;
      render(<MainLayoutReloaded />);
      expect(screen.queryByTestId('header')).not.toBeInTheDocument();
      expect(screen.getByTestId('outlet')).toBeInTheDocument();
      expect(screen.getByTestId('dashboard-footer')).toBeInTheDocument();
    });
 
-   it('hides Header on /settings page', () => {
+   it('hides Header on /settings page', async () => {
      vi.doMock('react-router-dom', () => ({
        Outlet: () => <div data-testid="outlet">Outlet Content</div>,
        useNavigate: () => mockNavigate,
        useLocation: () => ({ pathname: '/settings/account' }), // Example settings path
      }));
-     const MainLayoutReloaded = require('@/components/layout/MainLayout').default;
+     vi.resetModules();
+     const MainLayoutReloaded = (await import('@/components/layout/MainLayout')).default;
      render(<MainLayoutReloaded />);
      expect(screen.queryByTestId('header')).not.toBeInTheDocument();
      expect(screen.getByTestId('outlet')).toBeInTheDocument();

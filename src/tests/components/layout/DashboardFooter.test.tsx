@@ -12,7 +12,7 @@ vi.mock('@/hooks/useMobileDetect', () => ({
 }));
 
 describe('DashboardFooter', () => {
-  it('renders copyright and links on desktop', () => {
+  it('renders copyright and links on desktop', async () => {
     render(<DashboardFooter />);
     const currentYear = new Date().getFullYear();
 
@@ -25,11 +25,12 @@ describe('DashboardFooter', () => {
     expect(screen.getByText('·')).toBeInTheDocument();
   });
 
-  it('renders without separator dot on mobile', () => {
+  it('renders without separator dot on mobile', async () => {
     vi.doMock('@/hooks/useMobileDetect', () => ({
       useMobileDetect: () => ({ isMobile: true }),
     }));
-    const DashboardFooterReloaded = require('@/components/layout/DashboardFooter').default;
+    vi.resetModules();
+    const DashboardFooterReloaded = (await import('@/components/layout/DashboardFooter')).default;
     render(<DashboardFooterReloaded />);
     expect(screen.queryByText('·')).not.toBeInTheDocument();
     // Check if text size class is applied (might be fragile)
@@ -37,7 +38,7 @@ describe('DashboardFooter', () => {
     expect(linkContainer).toHaveClass('text-xs');
   });
 
-  it('links point to correct URLs', () => {
+  it('links point to correct URLs', async () => {
     render(<DashboardFooter />);
     expect(screen.getByText('Terms').closest('a')).toHaveAttribute('href', '/terms');
     expect(screen.getByText('Privacy').closest('a')).toHaveAttribute('href', '/privacy');

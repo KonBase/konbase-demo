@@ -50,44 +50,45 @@ describe('HomeHeader', () => {
     }));
   });
 
-  it('renders logo and title', () => {
+  it('renders logo and title', async () => {
     render(<HomeHeader />);
     expect(screen.getByAltText('KonBase Logo')).toBeInTheDocument();
     expect(screen.getByText('KonBase')).toBeInTheDocument();
   });
 
-  it('renders Login and Register buttons when logged out', () => {
+  it('renders Login and Register buttons when logged out', async () => {
     render(<HomeHeader />);
-    expect(screen.getByText('Login')).toBeInTheDocument();
-    expect(screen.getByText('Register')).toBeInTheDocument();
+    expect(screen.getAllByText('Login')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Register')[0]).toBeInTheDocument();
     expect(screen.queryByTestId('user-menu')).not.toBeInTheDocument();
   });
 
-  it('renders Dashboard button and UserMenu when logged in', () => {
+  it('renders Dashboard button and UserMenu when logged in', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({ user: { id: 'u1', email: 'test@test.com', user_metadata: { name: 'Tester' } }, userProfile: { role: 'member' } }),
     }));
-    const HomeHeaderReloaded = require('@/components/layout/HomeHeader').default;
+    vi.resetModules();
+    const HomeHeaderReloaded = (await import('@/components/layout/HomeHeader')).default;
     render(<HomeHeaderReloaded />);
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getAllByText('Dashboard')[0]).toBeInTheDocument();
     expect(screen.getByTestId('user-menu')).toBeInTheDocument();
     expect(screen.queryByText('Login')).not.toBeInTheDocument();
     expect(screen.queryByText('Register')).not.toBeInTheDocument();
   });
 
-  it('navigates to /login when Login clicked', () => {
+  it('navigates to /login when Login clicked', async () => {
     render(<HomeHeader />);
-    fireEvent.click(screen.getByText('Login'));
+    fireEvent.click(screen.getAllByText('Login')[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 
-  it('navigates to /register when Register clicked', () => {
+  it('navigates to /register when Register clicked', async () => {
     render(<HomeHeader />);
-    fireEvent.click(screen.getByText('Register'));
+    fireEvent.click(screen.getAllByText('Register')[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/register');
   });
 
-  it('opens mobile menu when hamburger clicked', () => {
+  it('opens mobile menu when hamburger clicked', async () => {
     render(<HomeHeader />);
     // Find the hamburger button (might need a more specific selector)
     const hamburgerButton = screen.getByRole('button', { name: /open menu/i });
@@ -95,6 +96,6 @@ describe('HomeHeader', () => {
     // Check if the sheet content is rendered (assuming SheetContent mock works)
     expect(screen.getByTestId('sheet-content')).toBeInTheDocument();
     // Check for an item within the mobile menu
-    expect(screen.getByText('Features')).toBeInTheDocument();
+    expect(screen.getAllByText('Features')[0]).toBeInTheDocument();
   });
 });

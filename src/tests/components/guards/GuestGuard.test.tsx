@@ -18,7 +18,7 @@ vi.mock('@/components/ui/spinner', () => ({
 }));
 
 describe('GuestGuard', () => {
-  it('renders children if not authenticated', () => {
+  it('renders children if not authenticated', async () => {
     render(
       <GuestGuard>
         <div>GuestContent</div>
@@ -27,7 +27,7 @@ describe('GuestGuard', () => {
     expect(screen.getByText(/GuestContent/)).toBeInTheDocument();
   });
 
-  it('shows spinner when loading', () => {
+  it('shows spinner when loading', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({
         user: null,
@@ -35,7 +35,8 @@ describe('GuestGuard', () => {
       }),
     }));
     // Re-import after mock
-    const GuestGuardReloaded = require('@/components/guards/GuestGuard').default;
+    vi.resetModules();
+    const GuestGuardReloaded = (await import('@/components/guards/GuestGuard')).default;
     render(
       <GuestGuardReloaded>
         <div>GuestContent</div>
@@ -44,14 +45,15 @@ describe('GuestGuard', () => {
     expect(screen.getByText(/SpinnerMock/)).toBeInTheDocument();
   });
 
-  it('redirects to dashboard if authenticated', () => {
+  it('redirects to dashboard if authenticated', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({
         user: { id: 'u1' },
         loading: false,
       }),
     }));
-    const GuestGuardReloaded = require('@/components/guards/GuestGuard').default;
+    vi.resetModules();
+    const GuestGuardReloaded = (await import('@/components/guards/GuestGuard')).default;
     render(
       <GuestGuardReloaded>
         <div>GuestContent</div>

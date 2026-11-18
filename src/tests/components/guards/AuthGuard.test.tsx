@@ -29,7 +29,7 @@ vi.mock('@/components/ui/spinner', () => ({
 }));
 
 describe('AuthGuard', () => {
-  it('renders children if authenticated and has required role', () => {
+  it('renders children if authenticated and has required role', async () => {
     render(
       <AuthGuard requiredRoles={['admin']}>
         <div>ProtectedContent</div>
@@ -38,7 +38,7 @@ describe('AuthGuard', () => {
     expect(screen.getByText(/ProtectedContent/)).toBeInTheDocument();
   });
 
-  it('redirects to dashboard if role is insufficient', () => {
+  it('redirects to dashboard if role is insufficient', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({
         user: { id: 'u1' },
@@ -46,7 +46,8 @@ describe('AuthGuard', () => {
         loading: false,
       }),
     }));
-    const AuthGuardReloaded = require('@/components/guards/AuthGuard').default;
+    vi.resetModules();
+    const AuthGuardReloaded = (await import('@/components/guards/AuthGuard')).default;
     render(
       <AuthGuardReloaded requiredRoles={['admin']}>
         <div>ProtectedContent</div>
@@ -55,7 +56,7 @@ describe('AuthGuard', () => {
     expect(screen.getByText(/Navigate to \/dashboard/)).toBeInTheDocument();
   });
 
-  it('redirects to login if not authenticated', () => {
+  it('redirects to login if not authenticated', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({
         user: null,
@@ -63,7 +64,8 @@ describe('AuthGuard', () => {
         loading: false,
       }),
     }));
-    const AuthGuardReloaded = require('@/components/guards/AuthGuard').default;
+    vi.resetModules();
+    const AuthGuardReloaded = (await import('@/components/guards/AuthGuard')).default;
     render(
       <AuthGuardReloaded requiredRoles={['admin']}>
         <div>ProtectedContent</div>
@@ -72,7 +74,7 @@ describe('AuthGuard', () => {
     expect(screen.getByText(/Navigate to \/login/)).toBeInTheDocument();
   });
 
-  it('shows spinner while loading', () => {
+  it('shows spinner while loading', async () => {
     vi.doMock('@/contexts/auth', () => ({
       useAuth: () => ({
         user: null,
@@ -80,7 +82,8 @@ describe('AuthGuard', () => {
         loading: true,
       }),
     }));
-    const AuthGuardReloaded = require('@/components/guards/AuthGuard').default;
+    vi.resetModules();
+    const AuthGuardReloaded = (await import('@/components/guards/AuthGuard')).default;
     render(
       <AuthGuardReloaded requiredRoles={['admin']}>
         <div>ProtectedContent</div>

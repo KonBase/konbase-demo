@@ -15,7 +15,7 @@ describe('LogoutButton', () => {
   it('renders and logs out on click', async () => {
     render(<LogoutButton />);
     fireEvent.click(screen.getByText(/Logout/i));
-    expect(screen.getByText(/Logout/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Logout/i)).toBeInTheDocument(); // back to idle after signOut resolves
   });
 
   it('shows loading state', () => {

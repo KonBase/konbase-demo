@@ -44,6 +44,7 @@ export function Header() {
                   variant="ghost" 
                   size="icon" 
                   onClick={handleBackNavigation}
+                  aria-label="Back"
                   className="mr-2"
                 >
                   <ArrowLeft className="h-4 w-4" />

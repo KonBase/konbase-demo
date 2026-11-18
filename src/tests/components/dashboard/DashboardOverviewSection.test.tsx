@@ -3,19 +3,19 @@ import { render, screen } from '@testing-library/react';
 import DashboardOverviewSection from '@/components/dashboard/DashboardOverviewSection';
 import React from 'react';
 
-vi.mock('./AssociationOverviewCard', () => ({
+vi.mock('@/components/dashboard/AssociationOverviewCard', () => ({
   __esModule: true,
   default: () => <div>AssociationOverviewCardMock</div>,
 }));
-vi.mock('./RecentActivityCard', () => ({
+vi.mock('@/components/dashboard/RecentActivityCard', () => ({
   __esModule: true,
   default: () => <div>RecentActivityCardMock</div>,
 }));
-vi.mock('./QuickActionsCard', () => ({
+vi.mock('@/components/dashboard/QuickActionsCard', () => ({
   __esModule: true,
   default: () => <div>QuickActionsCardMock</div>,
 }));
-vi.mock('@/components/ErrorBoundary', () => ({
+vi.mock('@/components/dashboard/components/ErrorBoundary', () => ({
   __esModule: true,
   default: (props: any) => <div>{props.children}</div>,
 }));

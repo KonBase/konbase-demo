@@ -47,17 +47,17 @@ describe('UserRoleManager', () => {
 
   it('shows all roles for admin:all', () => {
     render(<UserRoleManager userId="user-2" currentRole="member" />);
-    fireEvent.mouseDown(screen.getByRole('combobox'));
-    expect(screen.getByText(/super admin/i)).toBeInTheDocument();
-    expect(screen.getByText(/system admin/i)).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' }); // Radix Select opens via keyboard in jsdom
+    expect(screen.getByRole('option', { name: /super admin/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /system admin/i })).toBeInTheDocument();
   });
 
   it('calls updateUserRole on value change', async () => {
     render(<UserRoleManager userId="user-2" currentRole="member" />);
-    fireEvent.mouseDown(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByText(/admin/i));
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' }); // Radix Select opens via keyboard in jsdom
+    fireEvent.click(screen.getByRole('option', { name: /^admin$/i }));
     await waitFor(() => {
-      expect(screen.getByText(/admin/i)).toBeInTheDocument();
+      expect(screen.getByRole('combobox')).toHaveTextContent(/admin/i);
     });
   });
 });

@@ -46,7 +46,7 @@ describe('DashboardDebugPanel', () => {
         retryCount={0}
       />
     );
-    fireEvent.click(screen.getByText(/Performance/i));
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Performance/i }), { button: 0, ctrlKey: false }); // Radix Tabs activate on mousedown
     expect(screen.getByText(/PerformanceDebugMock/)).toBeInTheDocument();
   });
 });

@@ -21,9 +21,9 @@ vi.mock('@/components/ui/use-toast', () => ({
 describe('SystemSettings', () => {
   it('renders tabs and settings', () => {
     render(<SystemSettings />);
-    expect(screen.getByText(/General Settings/i)).toBeInTheDocument();
-    expect(screen.getByText(/Security Settings/i)).toBeInTheDocument();
-    expect(screen.getByText(/Email Settings/i)).toBeInTheDocument();
-    expect(screen.getByText(/Backup Settings/i)).toBeInTheDocument();
+    expect(screen.getByText(/General Settings/i)).toBeInTheDocument(); // default tab content
+    for (const name of ['General', 'Security', 'Email', 'Backup']) {
+      expect(screen.getByRole('tab', { name })).toBeInTheDocument();
+    }
   });
 });

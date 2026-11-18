@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { AssociationManagement } from '@/components/admin/AssociationManagement';
 
 vi.mock('@/hooks/use-toast', () => ({
@@ -8,7 +9,8 @@ vi.mock('@/hooks/use-toast', () => ({
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from: () => ({
-      select: vi.fn().mockResolvedValue({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
         data: [
           {
             id: 'a1',
@@ -21,7 +23,6 @@ vi.mock('@/lib/supabase', () => ({
         ],
         error: null,
       }),
-      order: vi.fn().mockReturnThis(),
       insert: vi.fn().mockResolvedValue({ error: null }),
       delete: vi.fn().mockResolvedValue({ error: null }),
       eq: vi.fn().mockReturnThis(),
@@ -47,14 +48,14 @@ describe('AssociationManagement', () => {
   });
 
   it('renders associations', async () => {
-    render(<AssociationManagement />);
+    render(<MemoryRouter><AssociationManagement /></MemoryRouter>);
     await waitFor(() => {
       expect(screen.getByText(/Association 1/)).toBeInTheDocument();
     });
   });
 
   it('shows new association dialog', () => {
-    render(<AssociationManagement />);
+    render(<MemoryRouter><AssociationManagement /></MemoryRouter>);
     fireEvent.click(screen.getByText(/New Association/i));
     expect(screen.getByText(/Create New Association/i)).toBeInTheDocument();
   });

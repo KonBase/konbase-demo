@@ -5,6 +5,7 @@ import React from 'react';
 
 // --- Mocks ---
 const mockToast = vi.fn();
+const mockUser = { id: 'user-123' }; // stable reference: a new user object per render would retrigger effects
 const mockSafeSelect = vi.fn();
 const mockSafeUpdate = vi.fn();
 const mockSubscribe = vi.fn(() => ({
@@ -33,7 +34,11 @@ vi.mock('@/hooks/useTypeSafeSupabase', () => ({
     }),
 }));
 vi.mock('@/contexts/auth', () => ({
-    useAuth: () => ({ user: { id: 'user-123' } }),
+    useAuth: () => ({ user: mockUser }),
+}));
+vi.mock('@/lib/supabase', () => ({
+    isMock: () => false,
+    isRealtimeConnected: () => false,
 }));
 vi.mock('@/components/ui/use-toast', () => ({
     useToast: () => ({ toast: mockToast }),
@@ -91,23 +96,23 @@ describe('NotificationsDropdown', () => {
         mockSafeSelect.mockImplementation(() => new Promise(() => {})); // Never resolves
         render(<NotificationsDropdown />);
         // Need to open the dropdown to see the content
-        fireEvent.click(screen.getByRole('button')); // Assuming trigger is a button
-        expect(await screen.findByText(/Loading notifications/i)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /^Notifications/i })); // Assuming trigger is a button
+        expect(await vi.waitFor(() => screen.getByText(/Loading notifications/i))).toBeInTheDocument();
     });
 
     it('renders error state on fetch failure', async () => {
         mockSafeSelect.mockResolvedValue({ data: null, error: { message: 'Fetch failed' } });
         render(<NotificationsDropdown />);
-        fireEvent.click(screen.getByRole('button'));
-        expect(await screen.findByText(/Unable to load notifications/i)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /^Notifications/i }));
+        expect(await vi.waitFor(() => screen.getByText(/Unable to load notifications/i))).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
     });
 
     it('renders empty state when no notifications', async () => {
         mockSafeSelect.mockResolvedValue({ data: [], error: null });
         render(<NotificationsDropdown />);
-        fireEvent.click(screen.getByRole('button'));
-        expect(await screen.findByText(/You have no notifications/i)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /^Notifications/i }));
+        expect(await vi.waitFor(() => screen.getByText(/You have no notifications/i))).toBeInTheDocument();
     });
 
     it('renders list of notifications and unread count badge', async () => {
@@ -115,11 +120,11 @@ describe('NotificationsDropdown', () => {
         render(<NotificationsDropdown />);
 
         // Check badge before opening
-        expect(screen.getByText('1')).toBeInTheDocument(); // Unread count
+        await vi.waitFor(() => expect(screen.getByText('1')).toBeInTheDocument()); // Unread count (after fetch)
 
-        fireEvent.click(screen.getByRole('button')); // Open dropdown
+        fireEvent.click(screen.getByRole('button', { name: /^Notifications/i })); // Open dropdown
 
-        expect(await screen.findByText('Unread Notification')).toBeInTheDocument();
+        expect(await vi.waitFor(() => screen.getByText('Unread Notification'))).toBeInTheDocument();
         expect(screen.getByText('Read Notification')).toBeInTheDocument();
         expect(screen.getByText('Mark all as read')).toBeInTheDocument(); // Should be visible if unread > 0
     });
@@ -127,12 +132,12 @@ describe('NotificationsDropdown', () => {
     it('marks a notification as read when checkmark clicked', async () => {
         mockSafeSelect.mockResolvedValue({ data: mockNotifications, error: null });
         render(<NotificationsDropdown />);
-        fireEvent.click(screen.getByRole('button')); // Open dropdown
+        fireEvent.click(screen.getByRole('button', { name: /^Notifications/i })); // Open dropdown
 
-        const unreadItem = await screen.findByText('Unread Notification');
+        const unreadItem = await vi.waitFor(() => screen.getByText('Unread Notification'));
         // Find the checkmark button within the unread item's container
-        const checkButton = unreadItem.closest('div')?.querySelector('button'); // Adjust selector based on actual structure
-        expect(checkButton).toBeInTheDocument();
+        const checkButton = screen.getByRole('button', { name: /Mark as read/i });
+        expect(unreadItem).toBeInTheDocument();
 
         await act(async () => {
             fireEvent.click(checkButton!);
@@ -148,9 +153,9 @@ describe('NotificationsDropdown', () => {
     it('marks all notifications as read when "Mark all as read" clicked', async () => {
         mockSafeSelect.mockResolvedValue({ data: mockNotifications, error: null });
         render(<NotificationsDropdown />);
-        fireEvent.click(screen.getByRole('button')); // Open dropdown
+        fireEvent.click(screen.getByRole('button', { name: /^Notifications/i })); // Open dropdown
 
-        const markAllButton = await screen.findByRole('button', { name: /Mark all as read/i });
+        const markAllButton = await vi.waitFor(() => screen.getByRole('button', { name: /Mark all as read/i }));
         await act(async () => {
             fireEvent.click(markAllButton);
             await vi.advanceTimersByTimeAsync(50); // Allow state update
@@ -166,14 +171,15 @@ describe('NotificationsDropdown', () => {
     it('refreshes notifications when refresh button clicked', async () => {
         mockSafeSelect.mockResolvedValue({ data: mockNotifications, error: null });
         render(<NotificationsDropdown />);
-        fireEvent.click(screen.getByRole('button')); // Open dropdown
+        fireEvent.click(screen.getByRole('button', { name: /^Notifications/i })); // Open dropdown
 
-        const refreshButton = await screen.findByTitle(/Connected. Click to refresh/i); // Use title to find refresh
+        const refreshButton = await vi.waitFor(() => screen.getByTitle(/Click to refresh/i)); // Use title to find refresh
         expect(mockSafeSelect).toHaveBeenCalledTimes(1); // Initial fetch
+        await vi.waitFor(() => expect(refreshButton).toBeEnabled()); // disabled while loading
 
         await act(async () => {
             fireEvent.click(refreshButton);
-            await vi.advanceTimersByTimeAsync(50); // Allow state update
+            await vi.advanceTimersByTimeAsync(2100); // fetches are throttled to one per 2s
         });
 
         expect(mockSafeSelect).toHaveBeenCalledTimes(2); // Should fetch again
@@ -196,16 +202,16 @@ describe('NotificationsDropdown', () => {
          });
 
          render(<NotificationsDropdown />);
-         fireEvent.click(screen.getByRole('button')); // Open dropdown
+         fireEvent.click(screen.getByRole('button', { name: /^Notifications/i })); // Open dropdown
 
          await act(async () => {
              await vi.advanceTimersByTimeAsync(1100); // Wait for initial delay + subscription attempt
          });
 
-         expect(await screen.findByText(/Real-time updates unavailable/i)).toBeInTheDocument();
+         expect(await vi.waitFor(() => screen.getByText(/Real-time updates unavailable/i))).toBeInTheDocument();
          expect(screen.getByRole('button', { name: /Retry connection/i })).toBeInTheDocument();
          // Check if Bell icon has error class (depends on cn implementation)
-         // const bellIcon = screen.getByRole('button').querySelector('svg'); // Find Bell icon
+         // const bellIcon = screen.getByRole('button', { name: /^Notifications/i }).querySelector('svg'); // Find Bell icon
          // expect(bellIcon).toHaveClass('text-red-500'); // Check for error color class
      });
 });

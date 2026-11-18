@@ -37,7 +37,7 @@ describe('AddUserToAssociation', () => {
   it('submits form and resets', async () => {
     render(<AddUserToAssociation associationId="a1" />);
     fireEvent.change(screen.getByLabelText(/User Email/i), { target: { value: 'test@example.com' } });
-    fireEvent.click(screen.getByText(/Add User/i));
+    fireEvent.click(screen.getByRole('button', { name: /Add User/i }));
     await waitFor(() => {
       expect(screen.getByLabelText(/User Email/i)).toHaveValue('');
     });

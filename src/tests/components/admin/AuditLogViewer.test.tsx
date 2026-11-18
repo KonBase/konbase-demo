@@ -9,28 +9,26 @@ vi.mock('@/components/ui/use-toast', () => ({
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from: () => ({
-      select: vi.fn().mockImplementation((...args) => {
-        if (args[1]?.head) {
-          return Promise.resolve({ count: 1, error: null });
-        }
-        return Promise.resolve({
-          data: [
-            {
-              id: 'log1',
-              action: 'update_role',
-              entity: 'profiles',
-              entity_id: 'user-1',
-              user_id: 'user-1',
-              changes: { role: 'admin' },
-              created_at: new Date().toISOString(),
-              ip_address: null,
-            },
-          ],
-          error: null,
-        });
+      select: vi.fn().mockImplementation(function (this: any, _cols: string, opts?: { head?: boolean }) {
+        return opts?.head ? Promise.resolve({ count: 1, error: null }) : this;
       }),
       order: vi.fn().mockReturnThis(),
-      range: vi.fn().mockReturnThis(),
+      // range() ends the logs query chain
+      range: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'log1',
+            action: 'update_role',
+            entity: 'profiles',
+            entity_id: 'user-1',
+            user_id: 'user-1',
+            changes: { role: 'admin' },
+            created_at: new Date().toISOString(),
+            ip_address: null,
+          },
+        ],
+        error: null,
+      }),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({
         data: { name: 'Test User', email: 'test@example.com' },

@@ -31,7 +31,7 @@ describe('AddEquipmentDialog', () => {
         onEquipmentAdded={vi.fn()}
       />
     );
-    expect(screen.getByText(/Add Equipment/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Add Equipment/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/Equipment Item/i)).toBeInTheDocument();
   });
 });

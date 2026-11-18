@@ -49,8 +49,8 @@ describe('MemberList', () => {
         onRemoveMember={vi.fn()}
       />
     );
-    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
-    fireEvent.click(screen.getByText(/Manager/i));
+    fireEvent.keyDown(screen.getAllByRole('combobox')[0], { key: 'Enter' }); // Radix Select opens via keyboard in jsdom
+    fireEvent.click(screen.getByRole('option', { name: /Manager/i }));
     expect(onUpdateRole).toHaveBeenCalled();
   });
 

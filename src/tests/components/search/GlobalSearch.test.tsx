@@ -4,30 +4,29 @@ import { GlobalSearch } from '@/components/search/GlobalSearch'; // Adjust path
 import React from 'react';
 
 // --- Mocks ---
-const mockNavigate = vi.fn();
-const mockToast = vi.fn();
-const mockSupabaseFrom = vi.fn();
-
-// Mock Supabase client and methods
-const mockSupabase = {
-    from: mockSupabaseFrom,
-};
+const { mockNavigate, mockToast, mockSupabaseFrom, mockSupabase, mockUseUserProfile, mockAssociation } = vi.hoisted(() => {
+    const mockSupabaseFrom = vi.fn();
+    return { mockNavigate: vi.fn(), mockToast: vi.fn(), mockSupabaseFrom, mockSupabase: { from: mockSupabaseFrom }, mockUseUserProfile: vi.fn(), mockAssociation: { currentAssociation: { id: 'assoc-1' } } };
+});
 
 // Mock specific table queries
-const mockItemsQuery = {
+const makeQuery = () => ({
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue({ data: [], error: null }),
-    in: vi.fn().mockReturnThis(), // Add 'in' for category/item name lookups
-};
-const mockCategoriesQuery = { ...mockItemsQuery }; // Clone basic structure
-const mockLocationsQuery = { ...mockItemsQuery };
-const mockSetsQuery = { ...mockItemsQuery };
-const mockDocumentsQuery = { ...mockItemsQuery };
-const mockConventionsQuery = { ...mockItemsQuery, order: vi.fn().mockReturnThis() };
-const mockMembersQuery = { ...mockItemsQuery };
-const mockProfilesQuery = { ...mockItemsQuery };
+    in: vi.fn().mockReturnThis(), // for category/item name lookups
+    order: vi.fn().mockReturnThis(),
+});
+// Separate mock fns per table (spreading would share the same fns)
+const mockItemsQuery = makeQuery();
+const mockCategoriesQuery = makeQuery();
+const mockLocationsQuery = makeQuery();
+const mockSetsQuery = makeQuery();
+const mockDocumentsQuery = makeQuery();
+const mockConventionsQuery = makeQuery();
+const mockMembersQuery = makeQuery();
+const mockProfilesQuery = makeQuery();
 
 mockSupabaseFrom.mockImplementation((tableName: string) => {
     if (tableName === 'items') return mockItemsQuery;
@@ -61,10 +60,10 @@ vi.mock('@/lib/supabase', () => ({
     supabase: mockSupabase,
 }));
 vi.mock('@/contexts/AssociationContext', () => ({
-    useAssociation: () => ({ currentAssociation: { id: 'assoc-1' } }), // Assume association is selected
+    useAssociation: () => mockAssociation, // Assume association is selected
 }));
 vi.mock('@/hooks/useUserProfile', () => ({
-    useUserProfile: () => ({ profile: { role: 'member' } }), // Default role
+    useUserProfile: mockUseUserProfile, // Default role
 }));
 vi.mock('@/components/ui/use-toast', () => ({
     useToast: () => ({ toast: mockToast }),
@@ -80,7 +79,7 @@ vi.mock('@/components/ui/badge', () => ({ Badge: (props: any) => <span {...props
 vi.mock('@/components/ui/command', () => ({
     CommandDialog: ({ children, open, onOpenChange }: { children: React.ReactNode, open: boolean, onOpenChange: (open: boolean) => void }) =>
         open ? <div data-testid="command-dialog">{children}</div> : null,
-    CommandInput: (props: any) => <input data-testid="command-input" {...props} />,
+    CommandInput: ({ onValueChange, ...props }: any) => <input data-testid="command-input" onChange={(e) => onValueChange?.(e.target.value)} {...props} />,
     CommandList: ({ children }: { children: React.ReactNode }) => <div data-testid="command-list">{children}</div>,
     CommandEmpty: ({ children }: { children: React.ReactNode }) => <div data-testid="command-empty">{children}</div>,
     CommandGroup: ({ children, heading }: { children: React.ReactNode, heading: string }) => <div data-testid={`group-${heading.toLowerCase()}`}>{children}</div>,
@@ -101,6 +100,7 @@ const mockMemberResult = { id: 'user-admin', name: 'Admin User', email: 'admin@t
 describe('GlobalSearch', () => {
     beforeEach(() => {
         vi.useFakeTimers();
+        mockUseUserProfile.mockReturnValue({ profile: { role: 'member' } });
         mockNavigate.mockClear();
         mockToast.mockClear();
         mockSupabaseFrom.mockClear();
@@ -125,7 +125,7 @@ describe('GlobalSearch', () => {
         mockProfilesQuery.limit.mockResolvedValue({ data: [], error: null });
 
         // Mock category lookup needed for item results
-        mockCategoriesQuery.select.mockResolvedValue({ data: [mockCategoryResult], error: null });
+        mockCategoriesQuery.in.mockResolvedValue({ data: [mockCategoryResult], error: null });
     });
 
     afterEach(() => {
@@ -180,7 +180,7 @@ describe('GlobalSearch', () => {
         fireEvent.change(input, { target: { value: 'tent' } });
 
         // Should show loading immediately after change (due to debounce mock)
-        await waitFor(() => {
+        await vi.waitFor(() => {
             expect(screen.queryAllByTestId('skeleton').length).toBeGreaterThan(0);
         });
 
@@ -190,7 +190,7 @@ describe('GlobalSearch', () => {
         });
 
         // Loading should disappear
-        await waitFor(() => {
+        await vi.waitFor(() => {
             expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument();
         });
     });
@@ -211,7 +211,7 @@ describe('GlobalSearch', () => {
         });
 
 
-        expect(await screen.findByTestId('command-empty')).toBeInTheDocument();
+        expect(await vi.waitFor(() => screen.getByTestId('command-empty'))).toBeInTheDocument();
         expect(screen.getByText(/No results found for "xyz123"/i)).toBeInTheDocument();
     });
 
@@ -220,6 +220,7 @@ describe('GlobalSearch', () => {
         mockLocationsQuery.limit.mockResolvedValue({ data: [mockLocationResult], error: null });
         mockConventionsQuery.limit.mockResolvedValue({ data: [mockConventionResult], error: null });
 
+        mockUseUserProfile.mockReturnValue({ profile: { role: 'manager' } }); // conventions need management role
         render(<GlobalSearch />);
         fireEvent.click(screen.getByRole('button', { name: /Search/i }));
         const input = screen.getByTestId('command-input');
@@ -230,7 +231,7 @@ describe('GlobalSearch', () => {
         });
 
         // Wait for results to render
-        expect(await screen.findByTestId('group-inventory')).toBeInTheDocument();
+        expect(await vi.waitFor(() => screen.getByTestId('group-inventory'))).toBeInTheDocument();
         expect(screen.getByTestId('item-item-Tent-item-1')).toBeInTheDocument(); // Check specific item
         expect(screen.getByText('Tent')).toBeInTheDocument();
         expect(screen.getByText('Shelter')).toBeInTheDocument(); // Description from category lookup
@@ -238,7 +239,7 @@ describe('GlobalSearch', () => {
         expect(screen.getByTestId('group-inventory')).toContainElement(screen.getByTestId('item-location-Shed A-loc-1'));
         expect(screen.getByText('Shed A')).toBeInTheDocument();
 
-        expect(await screen.findByTestId('group-conventions')).toBeInTheDocument();
+        expect(await vi.waitFor(() => screen.getByTestId('group-conventions'))).toBeInTheDocument();
         expect(screen.getByTestId('item-convention-Summer Camp-conv-1')).toBeInTheDocument();
         expect(screen.getByText('Summer Camp')).toBeInTheDocument();
     });
@@ -255,7 +256,7 @@ describe('GlobalSearch', () => {
             await vi.advanceTimersByTimeAsync(50); // Allow state updates
         });
 
-        const resultItem = await screen.findByTestId('item-item-Tent-item-1');
+        const resultItem = await vi.waitFor(() => screen.getByTestId('item-item-Tent-item-1'));
         fireEvent.click(resultItem);
 
         expect(mockNavigate).toHaveBeenCalledWith('/inventory/items?id=item-1');
@@ -275,7 +276,7 @@ describe('GlobalSearch', () => {
             await vi.advanceTimersByTimeAsync(50); // Allow state updates
         });
 
-        await waitFor(() => {
+        await vi.waitFor(() => {
             expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
                 title: 'Search Error',
                 variant: 'destructive',
@@ -285,7 +286,7 @@ describe('GlobalSearch', () => {
 
     it('searches members only if user is admin', async () => {
         // Mock user profile as admin
-        vi.mocked(require('@/hooks/useUserProfile')).useUserProfile.mockReturnValue({ profile: { role: 'admin' } });
+        mockUseUserProfile.mockReturnValue({ profile: { role: 'admin' } });
         mockProfilesQuery.limit.mockResolvedValue({ data: [mockMemberResult], error: null });
         // Mock association_members lookup
         mockMembersQuery.limit.mockResolvedValue({ data: [{ user_id: 'user-admin' }], error: null });
@@ -302,7 +303,7 @@ describe('GlobalSearch', () => {
 
         expect(mockSupabase.from).toHaveBeenCalledWith('association_members');
         expect(mockSupabase.from).toHaveBeenCalledWith('profiles');
-        expect(await screen.findByTestId('group-association members')).toBeInTheDocument();
+        expect(await vi.waitFor(() => screen.getByTestId('group-association members'))).toBeInTheDocument();
         expect(screen.getByText('Admin User')).toBeInTheDocument();
     });
 

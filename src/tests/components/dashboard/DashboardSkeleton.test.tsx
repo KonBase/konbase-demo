@@ -6,7 +6,7 @@ import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 describe('DashboardSkeleton', () => {
   it('renders skeleton cards', () => {
     render(<DashboardSkeleton />);
-    expect(screen.getAllByText(/Error loading content/i).length).toBe(0);
+    expect(screen.queryAllByText(/Error loading content/i).length).toBe(0);
   });
 
   it('renders error state', () => {

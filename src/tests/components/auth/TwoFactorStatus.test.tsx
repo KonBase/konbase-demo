@@ -2,6 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TwoFactorStatus from '@/components/auth/TwoFactorStatus';
 import React from 'react';
+vi.mock('@/contexts/auth', () => ({
+  useAuth: () => ({ user: { id: 'u1' }, profile: { id: 'u1', two_factor_enabled: false }, userProfile: { id: 'u1', role: 'admin' }, refreshProfile: vi.fn() }),
+}));
+
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: vi.fn() }),

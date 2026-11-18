@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import AssociationMembersPage from '@/components/association/AssociationMembersPage';
+vi.mock('@/contexts/auth', () => ({
+  useAuth: () => ({ user: { id: 'u1' }, profile: { id: 'u1', two_factor_enabled: false }, userProfile: { id: 'u1', role: 'admin' }, refreshProfile: vi.fn() }),
+}));
+vi.mock('@/contexts/AssociationContext', () => ({
+  useAssociation: () => ({ currentAssociation: { id: 'a1', name: 'Test Association' } }),
+}));
+
 
 vi.mock('@/hooks/useAssociationMembers', () => ({
   useAssociationMembers: () => ({

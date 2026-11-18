@@ -28,7 +28,7 @@ describe('AddConsumableDialog', () => {
         onConsumableAdded={vi.fn()}
       />
     );
-    expect(screen.getByText(/Add Consumable/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Add Consumable/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/Consumable Item/i)).toBeInTheDocument();
   });
 });
