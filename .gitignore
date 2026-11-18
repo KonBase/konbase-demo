@@ -33,3 +33,7 @@ coverage/
 /playwright/.cache/
 
 .wrangler
+
+.dev.vars
+.open-next/
+.next/

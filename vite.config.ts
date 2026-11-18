@@ -7,10 +7,10 @@ import rawPlugin from 'vite-plugin-raw'
 import fs from 'fs'; // Import Node.js fs module
 import { IncomingMessage, ServerResponse } from 'http'; // Import types for request/response
 
-// Ensure logs directory exists
+// Dev-only error log (must not touch the filesystem during CI/Workers builds)
 const logsDir = path.resolve(__dirname, 'logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir);
+if (process.env.NODE_ENV !== 'production' && !process.env.CI && !process.env.WORKERS_CI && !fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
 }
 const logFilePath = path.resolve(logsDir, 'dev-errors.log');
 
@@ -85,12 +85,21 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false, // 6 MB of maps would be uploaded as Workers assets for nothing
     // Ensure assets are properly referenced with the base path
     assetsDir: 'assets',
     // Make sure paths are correctly prefixed with base
     rollupOptions: {
       output: {
+        // Split vendor code so the app shell loads fast and caches across deploys
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'react';
+          if (id.includes('@radix-ui')) return 'radix';
+          if (/[\\/](recharts|d3-[^\\/]+|victory-vendor)[\\/]/.test(id)) return 'charts';
+          if (id.includes('@supabase')) return 'supabase';
+          return undefined;
+        },
         assetFileNames: 'assets/[name]-[hash][extname]',
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js'

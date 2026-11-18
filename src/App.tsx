@@ -10,65 +10,65 @@ import AuthGuard from './components/guards/AuthGuard';
 import { RoleGuard } from './components/auth/RoleGuard'; // Use named import for RoleGuard
 import { UserRoleType } from '@/types/user';
 import { isConfigured } from '@/lib/config-store';
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import CookieConsent from "react-cookie-consent";
 import clarity from '@microsoft/clarity';
 import { Link } from 'react-router-dom';
 
 // Pages
-import Dashboard from './pages/Dashboard';
-import ProfilePage from './pages/profile/ProfilePage';
-import Settings from './pages/settings/Settings';
-import ErrorPage from './pages/ErrorPage';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
+const Settings = lazy(() => import('./pages/settings/Settings'));
+const ErrorPage = lazy(() => import('./pages/ErrorPage'));
 
-import NotFound from './pages/NotFound';
-import Unauthorized from './pages/error/Unauthorized';
+const NotFound = lazy(() => import('./pages/NotFound'));
+const Unauthorized = lazy(() => import('./pages/error/Unauthorized'));
 
 // Admin pages
-import AdminPanel from './pages/admin/AdminPanel';
+const AdminPanel = lazy(() => import('./pages/admin/AdminPanel'));
 
 // Association pages
-import AssociationProfile from './pages/association/AssociationProfile';
-import AssociationMembers from './pages/association/AssociationMembers';
-import AssociationDetails from './pages/association/AssociationDetails';
-import AssociationsList from './pages/association/AssociationsList';
+const AssociationProfile = lazy(() => import('./pages/association/AssociationProfile'));
+const AssociationMembers = lazy(() => import('./pages/association/AssociationMembers'));
+const AssociationDetails = lazy(() => import('./pages/association/AssociationDetails'));
+const AssociationsList = lazy(() => import('./pages/association/AssociationsList'));
 
 // Convention pages
-import ConventionsList from './pages/conventions/ConventionsList';
-import ConventionDetails from './pages/conventions/ConventionDetails';
-import ConventionArchive from './pages/conventions/ConventionArchive';
-import ConventionEquipment from './pages/conventions/ConventionEquipment';
-import ConventionLocations from './pages/conventions/ConventionLocations';
-import ConventionLogs from './pages/conventions/ConventionLogs';
-import ConventionRequirements from './pages/conventions/ConventionRequirements';
-import ConventionConsumables from './pages/conventions/ConventionConsumables';
-import ConventionTemplates from './pages/conventions/ConventionTemplates';
+const ConventionsList = lazy(() => import('./pages/conventions/ConventionsList'));
+const ConventionDetails = lazy(() => import('./pages/conventions/ConventionDetails'));
+const ConventionArchive = lazy(() => import('./pages/conventions/ConventionArchive'));
+const ConventionEquipment = lazy(() => import('./pages/conventions/ConventionEquipment'));
+const ConventionLocations = lazy(() => import('./pages/conventions/ConventionLocations'));
+const ConventionLogs = lazy(() => import('./pages/conventions/ConventionLogs'));
+const ConventionRequirements = lazy(() => import('./pages/conventions/ConventionRequirements'));
+const ConventionConsumables = lazy(() => import('./pages/conventions/ConventionConsumables'));
+const ConventionTemplates = lazy(() => import('./pages/conventions/ConventionTemplates'));
 
 // Inventory pages
-import InventoryList from './pages/inventory/InventoryList';
-import InventoryItems from './pages/inventory/InventoryItems';
-import ItemCategories from './pages/inventory/ItemCategories';
-import ItemLocations from './pages/inventory/ItemLocations';
-import StorageLocations from './pages/inventory/StorageLocations';
-import WarrantiesDocuments from './pages/inventory/WarrantiesDocuments';
-import EquipmentSets from './pages/inventory/EquipmentSets';
-import ImportExport from './pages/inventory/ImportExport';
+const InventoryList = lazy(() => import('./pages/inventory/InventoryList'));
+const InventoryItems = lazy(() => import('./pages/inventory/InventoryItems'));
+const ItemCategories = lazy(() => import('./pages/inventory/ItemCategories'));
+const ItemLocations = lazy(() => import('./pages/inventory/ItemLocations'));
+const StorageLocations = lazy(() => import('./pages/inventory/StorageLocations'));
+const WarrantiesDocuments = lazy(() => import('./pages/inventory/WarrantiesDocuments'));
+const EquipmentSets = lazy(() => import('./pages/inventory/EquipmentSets'));
+const ImportExport = lazy(() => import('./pages/inventory/ImportExport'));
 
 // Reports
-import ReportsList from './pages/reports/ReportsList';
-import InventoryStatusReport from './pages/reports/InventoryStatusReport';
-import ConventionEquipmentReport from './pages/reports/ConventionEquipmentReport';
-import ConventionConsumablesReport from './pages/reports/ConventionConsumablesReport';
-import UserActivityReport from './pages/reports/UserActivityReport';
-import AuditLogReport from './pages/reports/AuditLogReport';
+const ReportsList = lazy(() => import('./pages/reports/ReportsList'));
+const InventoryStatusReport = lazy(() => import('./pages/reports/InventoryStatusReport'));
+const ConventionEquipmentReport = lazy(() => import('./pages/reports/ConventionEquipmentReport'));
+const ConventionConsumablesReport = lazy(() => import('./pages/reports/ConventionConsumablesReport'));
+const UserActivityReport = lazy(() => import('./pages/reports/UserActivityReport'));
+const AuditLogReport = lazy(() => import('./pages/reports/AuditLogReport'));
 
 // Auth pages
 import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import AuthCallback from './pages/auth/AuthCallback'; // Import the new AuthCallback component
-import AssociationSetup from './pages/setup/AssociationSetup';
+const Register = lazy(() => import('./pages/auth/Register'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const AuthCallback = lazy(() => import('./pages/auth/AuthCallback')); // Import the new AuthCallback component
+const AssociationSetup = lazy(() => import('./pages/setup/AssociationSetup'));
 
 // Layouts
 import RootLayout from './layouts/RootLayout';
@@ -122,6 +122,7 @@ function App() {
           <AuthProvider>
             <AssociationProvider>
               <SessionRecovery />
+              <Suspense fallback={<div role="status" aria-live="polite" className="p-8 text-center">Loading…</div>}>
               <Routes>
                 {/* Public routes accessible without authentication */}
                 <Route path="/login" element={<Login />} />
@@ -244,6 +245,7 @@ function App() {
                 <Route path="*" element={<NotFound />} />
 
               </Routes>
+              </Suspense>
               <CookieConsent
               location="bottom" // This prop might conflict with fixed positioning, but react-cookie-consent might handle it.
               buttonText="Accept"
