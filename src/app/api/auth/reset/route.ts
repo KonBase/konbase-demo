@@ -7,6 +7,11 @@ export async function POST(req: NextRequest) {
   const { token, password } = await req.json();
   if (!token || !password)
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  if (typeof password !== 'string' || password.length < 8)
+    return NextResponse.json(
+      { error: 'Password must be at least 8 characters' },
+      { status: 400 }
+    );
   const t = (await dataAccess.executeQuerySingle(
     `
     SELECT * FROM password_reset_tokens 

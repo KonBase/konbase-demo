@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { createDataAccessLayer } from '@/lib/db/data-access';
 import { sendMail } from '@/lib/utils/mailer';
+import { isDemoMode } from '@/lib/db/demo';
 
 export async function POST(req: Request) {
   const dataAccess = createDataAccessLayer();
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
     `,
       [email]
     );
+    let demoResetUrl: string | undefined;
     if (user) {
       const token = crypto.randomBytes(32).toString('hex');
       const expires_at = new Date(Date.now() + 1000 * 60 * 30); // 30 min
@@ -26,6 +28,8 @@ export async function POST(req: Request) {
         [user.id, token, expires_at]
       );
       const url = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/reset?token=${token}`;
+      // Demo has no mailbox, so hand the link to the page instead
+      if (isDemoMode()) demoResetUrl = url;
       await sendMail({
         to: email,
         subject: 'Reset your KonBase password',
@@ -33,7 +37,7 @@ export async function POST(req: Request) {
       });
     }
     // Always succeed to avoid user enumeration
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, demoResetUrl });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Failed';
     return NextResponse.json({ error: message }, { status: 500 });

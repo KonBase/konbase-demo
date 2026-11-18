@@ -196,6 +196,8 @@ export default function InventoryPage() {
       format: (value, row) => (
         <IconButton
           size='small'
+          aria-label={`Actions for ${row?.name ?? 'item'}`}
+          aria-haspopup='menu'
           onClick={e => handleMenuClick(e, row?.id || '')}
         >
           <MoreVertical size={16} />
@@ -276,8 +278,9 @@ export default function InventoryPage() {
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FormControl fullWidth size='small'>
-                <InputLabel>Category</InputLabel>
+                <InputLabel id='lbl-category'>Category</InputLabel>
                 <Select
+                  labelId='lbl-category'
                   value={categoryFilter}
                   onChange={e => setCategoryFilter(e.target.value as string)}
                   label='Category'
@@ -295,8 +298,9 @@ export default function InventoryPage() {
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FormControl fullWidth size='small'>
-                <InputLabel>Location</InputLabel>
+                <InputLabel id='lbl-location'>Location</InputLabel>
                 <Select
+                  labelId='lbl-location'
                   value={locationFilter}
                   onChange={e => setLocationFilter(e.target.value as string)}
                   label='Location'
@@ -314,8 +318,9 @@ export default function InventoryPage() {
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FormControl fullWidth size='small'>
-                <InputLabel>Condition</InputLabel>
+                <InputLabel id='lbl-condition'>Condition</InputLabel>
                 <Select
+                  labelId='lbl-condition'
                   value={conditionFilter}
                   onChange={e => setConditionFilter(e.target.value as string)}
                   label='Condition'
@@ -358,7 +363,9 @@ export default function InventoryPage() {
               <Box display='flex' alignItems='center' gap={2}>
                 <Package size={24} color='#1976d2' />
                 <Box>
-                  <Typography variant='h4'>{items.length}</Typography>
+                  <Typography variant='h4' component='p'>
+                    {items.length}
+                  </Typography>
                   <Typography color='text.secondary'>Total Items</Typography>
                 </Box>
               </Box>
@@ -371,7 +378,9 @@ export default function InventoryPage() {
               <Box display='flex' alignItems='center' gap={2}>
                 <Tag size={24} color='#388e3c' />
                 <Box>
-                  <Typography variant='h4'>{categories.length}</Typography>
+                  <Typography variant='h4' component='p'>
+                    {categories.length}
+                  </Typography>
                   <Typography color='text.secondary'>Categories</Typography>
                 </Box>
               </Box>
@@ -384,7 +393,9 @@ export default function InventoryPage() {
               <Box display='flex' alignItems='center' gap={2}>
                 <MapPin size={24} color='#f57c00' />
                 <Box>
-                  <Typography variant='h4'>{locations.length}</Typography>
+                  <Typography variant='h4' component='p'>
+                    {locations.length}
+                  </Typography>
                   <Typography color='text.secondary'>Locations</Typography>
                 </Box>
               </Box>
@@ -397,7 +408,7 @@ export default function InventoryPage() {
               <Box display='flex' alignItems='center' gap={2}>
                 <Package size={24} color='#d32f2f' />
                 <Box>
-                  <Typography variant='h4'>
+                  <Typography variant='h4' component='p'>
                     {
                       items.filter(item =>
                         ['poor', 'broken'].includes(item.condition)

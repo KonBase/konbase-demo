@@ -19,9 +19,6 @@ const konbaseColors = {
 
 export const theme = createTheme({
   cssVariables: true,
-  palette: {
-    mode: 'dark', // Default to dark theme
-  },
   colorSchemes: {
     light: {
       palette: {
@@ -32,7 +29,7 @@ export const theme = createTheme({
           contrastText: '#ffffff',
         },
         secondary: {
-          main: konbaseColors.cherry,
+          main: '#c2314f', // 5.5:1 on white (brand cherry is 4.3:1)
           light: '#e06680',
           dark: '#b72d4a',
           contrastText: '#ffffff',
@@ -43,12 +40,12 @@ export const theme = createTheme({
           dark: '#c62828',
         },
         warning: {
-          main: konbaseColors.gzdacz,
+          main: '#b45f00', // 4.6:1 on white (brand orange is 2.8:1)
           light: '#ff9800',
           dark: '#e65100',
         },
         info: {
-          main: konbaseColors.lightBlue,
+          main: '#0277bd', // 4.8:1 on white (brand light blue is 2.4:1)
           light: '#4fc3f7',
           dark: '#0277bd',
         },
@@ -63,7 +60,7 @@ export const theme = createTheme({
         },
         text: {
           primary: konbaseColors.black,
-          secondary: 'rgba(23, 23, 22, 0.6)',
+          secondary: 'rgba(23, 23, 22, 0.72)', // >=4.5:1 on #fafafa
         },
         grey: {
           50: '#fafafa',
@@ -82,16 +79,16 @@ export const theme = createTheme({
     dark: {
       palette: {
         primary: {
-          main: '#4a7bb7',
-          light: '#7ba3d4',
-          dark: '#2d5aa0',
-          contrastText: '#ffffff',
+          main: '#8fb4e8',
+          light: '#b4cdf0',
+          dark: '#5b8bc9',
+          contrastText: '#0b1b33',
         },
         secondary: {
-          main: konbaseColors.cherry,
-          light: '#e06680',
-          dark: '#b72d4a',
-          contrastText: '#ffffff',
+          main: '#e06680',
+          light: '#ec8fa3',
+          dark: '#c2314f',
+          contrastText: '#121212',
         },
         error: {
           main: '#f44336',
@@ -214,8 +211,7 @@ export const theme = createTheme({
         root: {
           borderRadius: 12,
           boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.12)',
-          border: '1px solid rgba(0,0,0,0.05)',
-          backgroundColor: konbaseColors.darkCard,
+          border: '1px solid var(--mui-palette-divider)',
         },
       },
     },
@@ -246,12 +242,12 @@ export const theme = createTheme({
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          borderBottom: '1px solid var(--mui-palette-divider)',
           padding: '12px 16px',
         },
         head: {
           fontWeight: 600,
-          backgroundColor: 'rgba(0,0,0,0.02)',
+          backgroundColor: 'var(--mui-palette-action-hover)',
         },
       },
     },
@@ -261,7 +257,7 @@ export const theme = createTheme({
           borderRadius: 6,
           marginBottom: 2,
           '&:hover': {
-            backgroundColor: 'rgba(0,0,0,0.02)',
+            backgroundColor: 'var(--mui-palette-action-hover)',
           },
         },
       },

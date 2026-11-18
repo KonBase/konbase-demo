@@ -211,6 +211,9 @@ function SignUpForm() {
                     <InputAdornment position='end'>
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={
+                          showPassword ? 'Hide password' : 'Show password'
+                        }
                         edge='end'
                       >
                         {showPassword ? (
@@ -242,6 +245,11 @@ function SignUpForm() {
                       <IconButton
                         onClick={() =>
                           setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        aria-label={
+                          showConfirmPassword
+                            ? 'Hide confirm password'
+                            : 'Show confirm password'
                         }
                         edge='end'
                       >

@@ -250,6 +250,8 @@ export const ChatWidget: React.FC = () => {
       <IconButton
         color='inherit'
         onClick={handleClick}
+        aria-label='Open chat'
+        aria-haspopup='dialog'
         sx={{ position: 'relative' }}
       >
         <MessageCircle size={24} />
@@ -299,11 +301,16 @@ export const ChatWidget: React.FC = () => {
             <Box>
               <IconButton
                 size='small'
+                aria-label='Chat settings'
                 onClick={() => setSettingsDialogOpen(true)}
               >
                 <Settings size={16} />
               </IconButton>
-              <IconButton size='small' onClick={() => setAnchorEl(anchorEl)}>
+              <IconButton
+                size='small'
+                aria-label='More chat options'
+                onClick={() => setAnchorEl(anchorEl)}
+              >
                 <MoreVertical size={16} />
               </IconButton>
             </Box>
@@ -443,15 +450,16 @@ export const ChatWidget: React.FC = () => {
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position='end'>
-                      <IconButton size='small'>
+                      <IconButton size='small' aria-label='Attach file'>
                         <Paperclip size={16} />
                       </IconButton>
-                      <IconButton size='small'>
+                      <IconButton size='small' aria-label='Add emoji'>
                         <Smile size={16} />
                       </IconButton>
                       <IconButton
                         size='small'
                         color='primary'
+                        aria-label='Send message'
                         onClick={handleSendMessage}
                         disabled={!message.trim()}
                       >
@@ -474,7 +482,12 @@ export const ChatWidget: React.FC = () => {
           <DialogTitle>Chat Settings</DialogTitle>
           <DialogContent>
             <Box display='flex' alignItems='center' gap={2} mb={2}>
-              <IconButton onClick={() => setIsMuted(!isMuted)}>
+              <IconButton
+                onClick={() => setIsMuted(!isMuted)}
+                aria-label={
+                  isMuted ? 'Unmute notifications' : 'Mute notifications'
+                }
+              >
                 {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
               </IconButton>
               <Typography>

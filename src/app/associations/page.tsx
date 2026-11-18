@@ -17,7 +17,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import type { ChipProps } from '@mui/material/Chip';
-import { Plus, Settings, Users, MoreVertical } from 'lucide-react';
+import { Plus, Users, MoreVertical } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { AssociationMember } from '@/types';
@@ -187,6 +187,8 @@ export default function AssociationsPage() {
                     </Box>
                     <IconButton
                       size='small'
+                      aria-label={`Actions for ${membership.association?.name ?? 'association'}`}
+                      aria-haspopup='menu'
                       onClick={e =>
                         handleMenuClick(e, membership.association?.id || '')
                       }
@@ -222,16 +224,6 @@ export default function AssociationsPage() {
                   >
                     View Details
                   </Button>
-                  {(membership.role === 'admin' ||
-                    membership.role === 'manager') && (
-                    <Button
-                      size='small'
-                      startIcon={<Settings size={16} />}
-                      href={`/associations/${membership.association?.id}/settings`}
-                    >
-                      Settings
-                    </Button>
-                  )}
                 </CardActions>
               </Card>
             </Box>

@@ -31,27 +31,46 @@ export async function GET() {
     });
   }
 
-  // Get conventions for the association
-  const conventions =
-    await dataAccess.getConventionsByAssociation(associationId);
-  const activeConventions = conventions.filter(
-    conv => conv.status === 'active'
-  );
+  const count = async (sql: string) =>
+    Number(
+      (await dataAccess.executeQuery<{ n: string }>(sql, [associationId]))[0]
+        ?.n ?? 0
+    );
 
-  // Get association members count
-  const associationMembers =
-    await dataAccess.getAssociationMembersByProfileId(associationId);
+  const [
+    totalItems,
+    itemsNeedingAttention,
+    associationMembers,
+    totalConventions,
+    activeConventions,
+    upcomingConventions,
+  ] = await Promise.all([
+    count('SELECT COUNT(*) AS n FROM items WHERE association_id = $1'),
+    count(
+      "SELECT COUNT(*) AS n FROM items WHERE association_id = $1 AND condition IN ('poor','broken')"
+    ),
+    count(
+      'SELECT COUNT(*) AS n FROM association_members WHERE association_id = $1'
+    ),
+    count('SELECT COUNT(*) AS n FROM conventions WHERE association_id = $1'),
+    count(
+      "SELECT COUNT(*) AS n FROM conventions WHERE association_id = $1 AND status = 'active'"
+    ),
+    count(
+      "SELECT COUNT(*) AS n FROM conventions WHERE association_id = $1 AND status = 'planning' AND start_date > NOW()"
+    ),
+  ]);
 
   return NextResponse.json({
     data: {
-      totalItems: 0, // TODO: Implement items count
-      totalConventions: conventions.length,
-      activeConventions: activeConventions.length,
-      upcomingConventions: 0, // TODO: Calculate upcoming conventions
-      itemsNeedingAttention: 0, // TODO: Calculate items needing attention
-      associationMembers: associationMembers.length,
-      recentActivity: [], // TODO: Implement recent activity
-      upcomingTasks: [], // TODO: Implement upcoming tasks
+      totalItems,
+      totalConventions,
+      activeConventions,
+      upcomingConventions,
+      itemsNeedingAttention,
+      associationMembers,
+      recentActivity: [],
+      upcomingTasks: [],
     },
   });
 }

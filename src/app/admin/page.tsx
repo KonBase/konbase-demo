@@ -111,7 +111,7 @@ export default function AdminPage() {
     return (
       <Container maxWidth='lg' sx={{ py: 4 }}>
         <Alert severity='error' sx={{ mb: 3 }}>
-          <Typography variant='h6' gutterBottom>
+          <Typography variant='h6' component='h2' gutterBottom>
             Access Denied
           </Typography>
           <Typography>
@@ -129,7 +129,7 @@ export default function AdminPage() {
         <Card sx={{ maxWidth: 600, mx: 'auto' }}>
           <CardContent sx={{ textAlign: 'center', py: 4 }}>
             <Shield size={64} color='#1976d2' style={{ marginBottom: 16 }} />
-            <Typography variant='h4' gutterBottom>
+            <Typography variant='h4' component='h1' gutterBottom>
               Admin Panel Access
             </Typography>
             <Typography color='text.secondary' sx={{ mb: 3 }}>

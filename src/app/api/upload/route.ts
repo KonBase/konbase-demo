@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { denyUnlessRole } from '@/lib/api/session';
 import { authOptions } from '@/lib/auth/config';
 import { getDataAccess } from '@/lib/db/data-access';
 import { getUnifiedStorage } from '@/lib/storage/unified';
@@ -31,6 +32,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const denied = await denyUnlessRole(
+      session.user.id ?? '',
+      associationId,
+      'manager'
+    );
+    if (denied) return denied;
 
     const formData = await request.formData();
     const file = formData.get('file') as File;

@@ -207,6 +207,12 @@ export const NotificationCenter: React.FC = () => {
       <IconButton
         color='inherit'
         onClick={handleClick}
+        aria-label={
+          unreadCount > 0
+            ? `Notifications, ${unreadCount} unread`
+            : 'Notifications'
+        }
+        aria-haspopup='dialog'
         sx={{ position: 'relative' }}
       >
         <Badge badgeContent={unreadCount} color='error'>
@@ -337,14 +343,6 @@ export const NotificationCenter: React.FC = () => {
                 </Fade>
               ))}
             </List>
-          )}
-
-          {notifications.length > 0 && (
-            <Box textAlign='center' mt={2}>
-              <Button size='small' href='/notifications' onClick={handleClose}>
-                View All Notifications
-              </Button>
-            </Box>
           )}
         </Box>
       </Popover>

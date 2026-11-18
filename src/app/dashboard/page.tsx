@@ -15,7 +15,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <Container maxWidth='lg' sx={{ py: 4 }}>
-        <Typography variant='h4' gutterBottom>
+        <Typography variant='h4' component='h1' gutterBottom>
           Dashboard
         </Typography>
         <Box
@@ -28,7 +28,9 @@ export default function DashboardPage() {
           <Box>
             <Card>
               <CardContent>
-                <Typography variant='h6'>User Setup</Typography>
+                <Typography variant='h6' component='h2'>
+                  User Setup
+                </Typography>
                 <Box mt={2}>
                   <Button
                     variant='outlined'
@@ -43,7 +45,9 @@ export default function DashboardPage() {
           <Box>
             <Card>
               <CardContent>
-                <Typography variant='h6'>Inventory</Typography>
+                <Typography variant='h6' component='h2'>
+                  Inventory
+                </Typography>
                 <Box mt={2}>
                   <Button
                     variant='outlined'
@@ -58,7 +62,9 @@ export default function DashboardPage() {
           <Box>
             <Card>
               <CardContent>
-                <Typography variant='h6'>Conventions</Typography>
+                <Typography variant='h6' component='h2'>
+                  Conventions
+                </Typography>
                 <Box mt={2}>
                   <Button
                     variant='outlined'

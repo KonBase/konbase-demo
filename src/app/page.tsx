@@ -125,7 +125,7 @@ export default function HomePage() {
         <Card sx={{ maxWidth: 500, width: '100%' }}>
           <CardContent sx={{ p: 4, textAlign: 'center' }}>
             <Shield size={64} color='#1976d2' style={{ marginBottom: 16 }} />
-            <Typography variant='h4' gutterBottom>
+            <Typography variant='h4' component='h1' gutterBottom>
               Welcome to KonBase
             </Typography>
             <Typography color='text.secondary' sx={{ mb: 4 }}>
@@ -182,7 +182,7 @@ export default function HomePage() {
       value: stats?.totalItems || 0,
       icon: Package,
       color: 'primary.main',
-      link: '/inventory/items',
+      link: '/inventory',
     },
     {
       title: 'Active Conventions',
@@ -196,14 +196,14 @@ export default function HomePage() {
       value: stats?.associationMembers || 0,
       icon: Users,
       color: 'info.main',
-      link: '/users',
+      link: '/associations',
     },
     {
       title: 'Items Need Attention',
       value: stats?.itemsNeedingAttention || 0,
       icon: AlertTriangle,
       color: 'warning.main',
-      link: '/inventory/maintenance',
+      link: '/reports',
     },
   ];
 
@@ -282,7 +282,7 @@ export default function HomePage() {
           <Box>
             <Card sx={{ height: '100%' }}>
               <CardContent>
-                <Typography variant='h6' gutterBottom>
+                <Typography variant='h6' component='h2' gutterBottom>
                   KonBase Features
                 </Typography>
                 <List>
@@ -295,7 +295,7 @@ export default function HomePage() {
                       secondary='Track items, categories, locations, and equipment sets'
                     />
                   </ListItem>
-                  <Divider />
+                  <Divider component='li' />
                   <ListItem>
                     <ListItemIcon>
                       <Calendar size={20} />
@@ -305,7 +305,7 @@ export default function HomePage() {
                       secondary='Plan events, manage equipment allocation, and track resources'
                     />
                   </ListItem>
-                  <Divider />
+                  <Divider component='li' />
                   <ListItem>
                     <ListItemIcon>
                       <Users size={20} />
@@ -315,7 +315,7 @@ export default function HomePage() {
                       secondary='Manage organizations, members, roles, and permissions'
                     />
                   </ListItem>
-                  <Divider />
+                  <Divider component='li' />
                   <ListItem>
                     <ListItemIcon>
                       <TrendingUp size={20} />
@@ -338,7 +338,7 @@ export default function HomePage() {
           <Box>
             <Card>
               <CardContent>
-                <Typography variant='h6' gutterBottom>
+                <Typography variant='h6' component='h2' gutterBottom>
                   Quick Actions
                 </Typography>
                 <Box display='flex' flexDirection='column' gap={1}>
@@ -346,7 +346,7 @@ export default function HomePage() {
                     variant='outlined'
                     size='small'
                     startIcon={<Package size={16} />}
-                    href='/inventory/items/new'
+                    href='/inventory'
                     fullWidth
                   >
                     Add New Item
@@ -355,7 +355,7 @@ export default function HomePage() {
                     variant='outlined'
                     size='small'
                     startIcon={<Calendar size={16} />}
-                    href='/conventions/new'
+                    href='/conventions'
                     fullWidth
                   >
                     Create Convention

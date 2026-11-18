@@ -208,6 +208,8 @@ export default function EquipmentSetsPage() {
                     </Box>
                     <IconButton
                       size='small'
+                      aria-label={`Actions for ${set.name}`}
+                      aria-haspopup='menu'
                       onClick={e => handleMenuClick(e, set.id)}
                     >
                       <MoreVertical size={20} />
@@ -255,13 +257,6 @@ export default function EquipmentSetsPage() {
                     href={`/inventory/equipment-sets/${set.id}`}
                   >
                     View Details
-                  </Button>
-                  <Button
-                    size='small'
-                    startIcon={<Edit size={16} />}
-                    href={`/inventory/equipment-sets/${set.id}/edit`}
-                  >
-                    Edit
                   </Button>
                 </CardActions>
               </Card>

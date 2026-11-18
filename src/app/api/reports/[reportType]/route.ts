@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { denyUnlessRole } from '@/lib/api/session';
 import { authOptions } from '@/lib/auth/config';
 import DataAccessLayer, { createDataAccessLayer } from '@/lib/db/data-access';
 
@@ -23,6 +24,13 @@ export async function GET(
         { status: 400 }
       );
     }
+
+    const denied = await denyUnlessRole(
+      session.user.id,
+      associationId,
+      'member'
+    );
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '30');

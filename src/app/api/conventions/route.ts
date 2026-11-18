@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { denyUnlessRole } from '@/lib/api/session';
 import { authOptions } from '@/lib/auth/config';
 import { createDataAccessLayer } from '@/lib/db/data-access';
 import { conventionSchema } from '@/lib/validations/schemas';
@@ -24,6 +25,13 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const denied = await denyUnlessRole(
+      session.user.id,
+      associationId,
+      'member'
+    );
+    if (denied) return denied;
 
     const dataAccess = createDataAccessLayer('postgresql');
     let conventions =
@@ -76,6 +84,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const denied = await denyUnlessRole(
+      session.user.id,
+      associationId,
+      'manager'
+    );
+    if (denied) return denied;
 
     const dataAccess = createDataAccessLayer('postgresql');
 

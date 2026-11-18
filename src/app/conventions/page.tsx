@@ -265,6 +265,8 @@ export default function ConventionsPage() {
                     </Box>
                     <IconButton
                       size='small'
+                      aria-label={`Actions for ${convention.name}`}
+                      aria-haspopup='menu'
                       onClick={e => handleMenuClick(e, convention.id)}
                     >
                       <MoreVertical size={20} />
@@ -302,15 +304,6 @@ export default function ConventionsPage() {
                   >
                     View Details
                   </Button>
-                  {convention.status === 'planning' && (
-                    <Button
-                      size='small'
-                      startIcon={<Edit size={16} />}
-                      href={`/conventions/${convention.id}/edit`}
-                    >
-                      Edit
-                    </Button>
-                  )}
                 </CardActions>
               </Card>
             </Box>

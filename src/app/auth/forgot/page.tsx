@@ -27,6 +27,7 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [demoResetUrl, setDemoResetUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -45,6 +46,7 @@ export default function ForgotPasswordPage() {
       });
 
       if (res.ok) {
+        setDemoResetUrl((await res.json()).demoResetUrl ?? null);
         setStatus(
           'If an account with this email exists, a password reset link has been sent.'
         );
@@ -98,6 +100,12 @@ export default function ForgotPasswordPage() {
               <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
                 {status}
               </Typography>
+              {demoResetUrl && (
+                <Alert severity='info' sx={{ mb: 3, textAlign: 'left' }}>
+                  Demo mode has no mailbox:{' '}
+                  <a href={demoResetUrl}>open the reset link</a>.
+                </Alert>
+              )}
               <Stack direction='row' spacing={2} justifyContent='center'>
                 <Button
                   variant='outlined'

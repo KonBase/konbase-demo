@@ -118,7 +118,7 @@ export default function ReportsPage() {
           >
             <Card>
               <CardContent>
-                <Typography variant='h6' gutterBottom>
+                <Typography variant='h6' component='h2' gutterBottom>
                   Items by Condition
                 </Typography>
                 <ResponsiveContainer width='100%' height={300}>
@@ -146,7 +146,7 @@ export default function ReportsPage() {
             </Card>
             <Card>
               <CardContent>
-                <Typography variant='h6' gutterBottom>
+                <Typography variant='h6' component='h2' gutterBottom>
                   Items by Category
                 </Typography>
                 <ResponsiveContainer width='100%' height={300}>
@@ -167,7 +167,7 @@ export default function ReportsPage() {
         return (
           <Card>
             <CardContent>
-              <Typography variant='h6' gutterBottom>
+              <Typography variant='h6' component='h2' gutterBottom>
                 Equipment Usage Over Time
               </Typography>
               <ResponsiveContainer width='100%' height={400}>
@@ -308,8 +308,9 @@ export default function ReportsPage() {
         <CardContent>
           <Box display='flex' gap={2} alignItems='center' flexWrap='wrap'>
             <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Report Type</InputLabel>
+              <InputLabel id='lbl-report-type'>Report Type</InputLabel>
               <Select
+                labelId='lbl-report-type'
                 value={selectedReport}
                 onChange={e => setSelectedReport(e.target.value)}
                 label='Report Type'
@@ -326,8 +327,9 @@ export default function ReportsPage() {
             </FormControl>
 
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Date Range</InputLabel>
+              <InputLabel id='lbl-date-range'>Date Range</InputLabel>
               <Select
+                labelId='lbl-date-range'
                 value={dateRange}
                 onChange={e => setDateRange(e.target.value)}
                 label='Date Range'
@@ -352,7 +354,7 @@ export default function ReportsPage() {
               return <IconComponent size={24} color='#666' />;
             })()}
             <Box>
-              <Typography variant='h6'>
+              <Typography variant='h6' component='h2'>
                 {reportTypes.find(r => r.id === selectedReport)?.name}
               </Typography>
               <Typography color='text.secondary'>

@@ -32,8 +32,11 @@ export async function PATCH(req: NextRequest) {
     window: 1,
   });
   if (!ok) return NextResponse.json({ error: 'Invalid code' }, { status: 400 });
+  // CSPRNG, not Math.random: these keys bypass 2FA
   const recovery = Array.from({ length: 10 }, () =>
-    Math.random().toString(36).slice(2, 10)
+    Array.from(crypto.getRandomValues(new Uint8Array(5)), b =>
+      b.toString(16).padStart(2, '0')
+    ).join('')
   );
   await dataAccess.executeQuery(
     `

@@ -139,6 +139,9 @@ function SignInForm() {
                     <InputAdornment position='end'>
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={
+                          showPassword ? 'Hide password' : 'Show password'
+                        }
                         edge='end'
                       >
                         {showPassword ? (
