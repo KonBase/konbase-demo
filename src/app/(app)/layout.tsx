@@ -10,6 +10,6 @@ export default function AppGroupLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/auth/signin');
   }, [status, router]);
-  if (status === 'loading') return null;
+  if (status !== 'authenticated') return null; // avoid flashing app chrome before redirect
   return <AppLayout>{children}</AppLayout>;
 }

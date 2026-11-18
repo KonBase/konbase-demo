@@ -10,7 +10,6 @@ import {
   Skeleton,
   Typography,
 } from '@mui/material';
-import AppLayout from '@/components/layout/AppLayout';
 
 type Field = [label: string, value: unknown];
 
@@ -51,7 +50,7 @@ export default function DetailPage<T extends { id: string }>({
   });
 
   return (
-    <AppLayout>
+    <>
       <Button href={backHref} sx={{ mb: 2 }}>
         ← {backLabel}
       </Button>
@@ -92,6 +91,6 @@ export default function DetailPage<T extends { id: string }>({
           </CardContent>
         </Card>
       )}
-    </AppLayout>
+    </>
   );
 }
