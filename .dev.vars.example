@@ -1,0 +1,4 @@
+# Copy to .dev.vars for `npm run preview:cf`
+NEXTAUTH_SECRET=change-me
+NEXTAUTH_URL=http://localhost:8787
+POSTGRES_URL=postgres://user:password@host:5432/konbase

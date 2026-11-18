@@ -1,0 +1,208 @@
+@import 'tailwindcss';
+
+@theme {
+  /* KonBase Design System - Light Theme */
+  --color-background: #ffffff;
+  --color-foreground: #171716;
+  --color-card: #ffffff;
+  --color-card-foreground: #171716;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #171716;
+  --color-primary: #0c2e62;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #d84165;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #64748b;
+  --color-accent: #fce771;
+  --color-accent-foreground: #171716;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #0c2e62;
+  --color-warning: #ea8000;
+  --color-info: #0fb4ea;
+  --color-success: #2e7d32;
+  --radius: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    /* KonBase Design System - Dark Theme (Default) */
+    --color-background: #121212;
+    --color-foreground: #e6e6dc;
+    --color-card: #1e1e1e;
+    --color-card-foreground: #e6e6dc;
+    --color-popover: #1e1e1e;
+    --color-popover-foreground: #e6e6dc;
+    --color-primary: #0c2e62;
+    --color-primary-foreground: #e6e6dc;
+    --color-secondary: #d84165;
+    --color-secondary-foreground: #e6e6dc;
+    --color-muted: #2a2a2a;
+    --color-muted-foreground: #94a3b8;
+    --color-accent: #fce771;
+    --color-accent-foreground: #171716;
+    --color-destructive: #dc2626;
+    --color-destructive-foreground: #e6e6dc;
+    --color-border: #2a2a2a;
+    --color-input: #2a2a2a;
+    --color-ring: #0c2e62;
+    --color-warning: #ea8000;
+    --color-info: #0fb4ea;
+    --color-success: #4caf50;
+  }
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+}
+
+/* KonBase Design System Components */
+.konbase-card {
+  background-color: var(--color-card);
+  color: var(--color-card-foreground);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.konbase-button {
+  background-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.konbase-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.konbase-button-primary {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.konbase-button-secondary {
+  background-color: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+}
+
+.konbase-navbar {
+  background-color: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.konbase-search {
+  background-color: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  color: var(--color-foreground);
+  width: 300px;
+}
+
+.konbase-search:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(12, 46, 98, 0.2);
+}
+
+.konbase-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.konbase-table th,
+.konbase-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.konbase-table th {
+  background-color: var(--color-muted);
+  font-weight: 600;
+}
+
+.konbase-table tr:hover {
+  background-color: var(--color-muted);
+}
+
+.konbase-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.konbase-badge-new {
+  background-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+.konbase-badge-good {
+  background-color: var(--color-info);
+  color: white;
+}
+
+.konbase-badge-expired {
+  background-color: var(--color-destructive);
+  color: white;
+}
+
+.konbase-footer {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Status indicators */
+.status-planning {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.status-active {
+  background-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+.status-archived {
+  background-color: var(--color-muted);
+  color: var(--color-muted-foreground);
+}
+
+/* Dark theme by default */
+@media (prefers-color-scheme: light) {
+  body {
+    background-color: #ffffff;
+    color: #171716;
+  }
+}
