@@ -477,9 +477,9 @@ export class DataAccessLayer {
     if (this.dbType === 'postgresql') {
       const result = await this.getPostgresDb().querySingle(
         `
-        INSERT INTO convention_members (convention_id, profile_id, role, created_at)
+        INSERT INTO convention_members (convention_id, profile_id, role, joined_at)
         VALUES ($1, $2, $3, NOW())
-        RETURNING id, convention_id, profile_id, role, created_at
+        RETURNING id, convention_id, profile_id, role, joined_at AS created_at
       `,
         [memberData.convention_id, memberData.profile_id, memberData.role]
       );

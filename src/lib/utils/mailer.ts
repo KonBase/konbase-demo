@@ -18,6 +18,11 @@ export async function sendMail(opts: {
   subject: string;
   html: string;
 }) {
+  if (!host || !user || !pass) {
+    // Demo mode: no SMTP, just log
+    console.log(`[demo mail] to=${opts.to} subject=${opts.subject}`);
+    return;
+  }
   const tx = getTransport();
   await tx.sendMail({ from, ...opts });
 }

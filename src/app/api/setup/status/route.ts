@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
+import { isDemoMode } from '@/lib/db/demo';
 import { createDataAccessLayer } from '@/lib/db/data-access';
 
 export async function GET() {
   try {
     // Check if PostgreSQL is configured
-    if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
+    if (
+      !isDemoMode() &&
+      !process.env.POSTGRES_URL &&
+      !process.env.DATABASE_URL
+    ) {
       return NextResponse.json({
         setupComplete: false,
         databaseType: 'postgresql',

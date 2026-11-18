@@ -36,35 +36,44 @@ export async function GET(request: NextRequest) {
       paramIndex++;
     }
 
-    const equipmentSets = await dataAccess.executeQuery(
-      `
-      SELECT 
-        es.*,
-        COALESCE(
-          json_agg(
-            json_build_object(
-              'id', esi.id,
-              'itemId', esi.item_id,
-              'quantity', esi.quantity,
-              'item', json_build_object(
-                'id', i.id,
-                'name', i.name,
-                'description', i.description,
-                'condition', i.condition
-              )
-            )
-          ) FILTER (WHERE esi.id IS NOT NULL),
-          '[]'::json
-        ) as items
-      FROM equipment_sets es
-      LEFT JOIN equipment_set_items esi ON es.id = esi.equipment_set_id
-      LEFT JOIN items i ON esi.item_id = i.id
-      ${whereClause}
-      GROUP BY es.id
-      ORDER BY es.created_at DESC
-    `,
+    // Two plain queries instead of json_agg (also runs on the in-memory demo DB)
+    const sets = await dataAccess.executeQuery<{ id: string }>(
+      `SELECT es.* FROM equipment_sets es ${whereClause} ORDER BY es.created_at DESC`,
       params
     );
+    const links = sets.length
+      ? await dataAccess.executeQuery<{
+          id: string;
+          equipment_set_id: string;
+          item_id: string;
+          quantity: number;
+          name: string;
+          description: string | null;
+          condition: string;
+        }>(
+          `SELECT esi.id, esi.equipment_set_id, esi.item_id, esi.quantity,
+                  i.name, i.description, i.condition
+           FROM equipment_set_items esi JOIN items i ON esi.item_id = i.id
+           WHERE esi.equipment_set_id IN (${sets.map((_, n) => `$${n + 1}`).join(',')})`,
+          sets.map(s => s.id)
+        )
+      : [];
+    const equipmentSets = sets.map(set => ({
+      ...set,
+      items: links
+        .filter(l => l.equipment_set_id === set.id)
+        .map(l => ({
+          id: l.id,
+          itemId: l.item_id,
+          quantity: l.quantity,
+          item: {
+            id: l.item_id,
+            name: l.name,
+            description: l.description,
+            condition: l.condition,
+          },
+        })),
+    }));
 
     return NextResponse.json({ data: equipmentSets, success: true });
   } catch (error) {

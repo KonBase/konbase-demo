@@ -1,4 +1,5 @@
 import { Pool, PoolClient } from 'pg';
+import { isDemoMode, demoQuery } from './demo';
 
 // Lazy initialization to avoid build-time errors
 let pool: Pool | null = null;
@@ -49,6 +50,7 @@ export async function executeQuery<T = unknown>(
   query: string,
   params: unknown[] = []
 ): Promise<T[]> {
+  if (isDemoMode()) return demoQuery<T>(query, params);
   const client = await getPostgresClient();
   try {
     const result = await client.query(query, params);
@@ -76,7 +78,7 @@ export async function testPostgresConnection(): Promise<{
   const startTime = Date.now();
 
   try {
-    await executeQuerySingle('SELECT 1 as test');
+    await executeQuerySingle('SELECT 1 as test'); // demo mode: in-memory PGlite
     const latency = Date.now() - startTime;
     return { status: 'healthy', latency };
   } catch (error) {
@@ -95,8 +97,12 @@ export function getPostgresConnectionInfo() {
 
   return {
     type: 'postgresql',
-    url: databaseUrl ? 'configured' : 'not configured',
-    hasUrl: !!databaseUrl,
+    url: databaseUrl
+      ? 'configured'
+      : isDemoMode()
+        ? 'demo (in-memory)'
+        : 'not configured',
+    hasUrl: !!databaseUrl || isDemoMode(),
     environment: process.env.NODE_ENV || 'development',
   };
 }

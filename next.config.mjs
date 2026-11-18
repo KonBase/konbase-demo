@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // PGlite loads its wasm via import.meta.url; must not be bundled by webpack
+  serverExternalPackages: ['@electric-sql/pglite'],
   images: {
     domains: ['localhost'],
     unoptimized: true,

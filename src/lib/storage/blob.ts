@@ -8,6 +8,9 @@ export interface BlobFile {
   contentType?: string;
 }
 
+// Demo storage: files live in memory (lost on restart); served via /api/files/*
+export const memoryFiles = new Map<string, { data: Buffer; info: BlobFile }>();
+
 export interface BlobStorageConfig {
   type: 'vercel-blob' | 'local';
   blobReadWriteToken?: string;
@@ -74,11 +77,21 @@ export class BlobStorageAdapter {
         contentType: options?.contentType,
       };
     } else {
-      // Local storage implementation - for browser environment, we'll use a different approach
-      // In a real implementation, this would be handled by the server
-      throw new Error(
-        'Local storage is not supported in browser environment. Use Vercel Blob instead.'
-      );
+      const data =
+        typeof file === 'string'
+          ? Buffer.from(file)
+          : file instanceof Buffer
+            ? file
+            : Buffer.from(await (file as File).arrayBuffer());
+      const info: BlobFile = {
+        url: `/api/files/${pathname}`,
+        pathname,
+        size: data.length,
+        uploadedAt: new Date().toISOString(),
+        contentType: options?.contentType,
+      };
+      memoryFiles.set(pathname, { data, info });
+      return info;
     }
   }
 
@@ -92,10 +105,7 @@ export class BlobStorageAdapter {
         token: this.config.blobReadWriteToken,
       });
     } else {
-      // Local storage deletion - not supported in browser
-      throw new Error(
-        'Local storage is not supported in browser environment. Use Vercel Blob instead.'
-      );
+      memoryFiles.delete(pathname);
     }
   }
 
@@ -118,8 +128,7 @@ export class BlobStorageAdapter {
           contentType: blob.contentType,
         };
       } else {
-        // Local storage info - not supported in browser
-        return null;
+        return memoryFiles.get(pathname)?.info ?? null;
       }
     } catch {
       // eslint-disable-next-line no-console
@@ -158,9 +167,11 @@ export class BlobStorageAdapter {
         cursor: result.cursor,
       };
     } else {
-      // Local storage listing - not supported in browser
+      const prefix = options?.prefix ?? '';
       return {
-        blobs: [],
+        blobs: [...memoryFiles.values()]
+          .map(f => f.info)
+          .filter(i => i.pathname.startsWith(prefix)),
       };
     }
   }

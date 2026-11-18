@@ -1,4 +1,8 @@
-import { createBlobStorageAdapter, BlobStorageAdapter } from './blob';
+import {
+  createBlobStorageAdapter,
+  BlobStorageAdapter,
+  memoryFiles,
+} from './blob';
 
 export interface FileUpload {
   pathname: string;
@@ -142,8 +146,7 @@ export class UnifiedStorage {
         return null;
       }
     } else {
-      // For local storage, not supported in browser environment
-      return null;
+      return memoryFiles.get(pathname)?.data ?? null;
     }
   }
 

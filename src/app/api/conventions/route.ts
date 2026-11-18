@@ -90,11 +90,11 @@ export async function POST(request: NextRequest) {
       status: validatedData.status || 'planning',
     });
 
-    // Add creator as admin
+    // Add creator as organizer (convention_role_type has no 'admin')
     await dataAccess.createConventionMember({
       convention_id: convention.id,
       profile_id: session.user.id,
-      role: 'admin',
+      role: 'organizer',
     });
 
     return NextResponse.json(

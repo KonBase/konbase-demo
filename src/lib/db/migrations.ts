@@ -392,6 +392,14 @@ export const migrations: Migration[] = [
       CREATE POLICY "Allow all operations on invitations" ON invitations FOR ALL USING (true);
     `,
   },
+  {
+    version: '0005',
+    name: 'invitations_invited_by',
+    // /api/invitations selects and inserts invited_by, but 0003 never created it
+    up: `
+      ALTER TABLE invitations ADD COLUMN invited_by uuid REFERENCES profiles(user_id) ON DELETE SET NULL;
+    `,
+  },
 ];
 
 // Migration tracking table

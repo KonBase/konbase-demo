@@ -45,26 +45,36 @@ export async function GET(request: NextRequest) {
     }
 
     // Get users with profile and association counts
-    const users = await dataAccess.executeQuery(
+    // Counts come from a second plain GROUP BY (no GROUP BY u.*; also runs on the demo DB)
+    const rows = await dataAccess.executeQuery<{ id: string }>(
       `
-      SELECT 
+      SELECT
         u.*,
         p.first_name,
         p.last_name,
         p.avatar_url,
         p.two_factor_enabled,
-        p.totp_secret,
-        COUNT(DISTINCT am.id) as association_count
+        p.totp_secret
       FROM users u
       LEFT JOIN profiles p ON u.id = p.user_id
-      LEFT JOIN association_members am ON u.id = am.profile_id
       ${whereClause}
-      GROUP BY u.id, p.first_name, p.last_name, p.avatar_url, p.two_factor_enabled, p.totp_secret
       ORDER BY u.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `,
       [...params, limit, offset]
     );
+    const counts = await dataAccess.executeQuery<{
+      profile_id: string;
+      n: string;
+    }>(
+      'SELECT profile_id, COUNT(*) AS n FROM association_members GROUP BY profile_id'
+    );
+    const users = rows.map(u => ({
+      ...u,
+      association_count: Number(
+        counts.find(c => c.profile_id === u.id)?.n ?? 0
+      ),
+    }));
 
     // Get total count for pagination
     const totalCount = (await dataAccess.executeQuerySingle(

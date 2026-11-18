@@ -43,24 +43,33 @@ export async function GET(request: NextRequest) {
     }
 
     // Get associations with counts
-    const associations = await dataAccess.executeQuery(
+    // Counts via separate GROUP BY queries (also runs on the demo DB)
+    const rows = await dataAccess.executeQuery<{ id: string }>(
       `
-      SELECT 
-        a.*,
-        COUNT(DISTINCT am.id) as member_count,
-        COUNT(DISTINCT c.id) as convention_count,
-        COUNT(DISTINCT i.id) as item_count
-      FROM associations a
-      LEFT JOIN association_members am ON a.id = am.association_id
-      LEFT JOIN conventions c ON a.id = c.association_id
-      LEFT JOIN items i ON a.id = i.association_id
+      SELECT a.* FROM associations a
       ${whereClause}
-      GROUP BY a.id
       ORDER BY a.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `,
       [...params, limit, offset]
     );
+    const countBy = async (table: string) =>
+      dataAccess.executeQuery<{ association_id: string; n: string }>(
+        `SELECT association_id, COUNT(*) AS n FROM ${table} GROUP BY association_id`
+      );
+    const [members, conventions, items] = await Promise.all([
+      countBy('association_members'),
+      countBy('conventions'),
+      countBy('items'),
+    ]);
+    const n = (list: typeof members, id: string) =>
+      Number(list.find(c => c.association_id === id)?.n ?? 0);
+    const associations = rows.map(a => ({
+      ...a,
+      member_count: n(members, a.id),
+      convention_count: n(conventions, a.id),
+      item_count: n(items, a.id),
+    }));
 
     // Get total count for pagination
     const totalCount = (await dataAccess.executeQuerySingle(

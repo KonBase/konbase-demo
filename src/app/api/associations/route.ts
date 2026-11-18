@@ -13,22 +13,40 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // UI reads membership.association.{id,name,...} and membership.joined_at
     const dataAccess = getDataAccess();
-    const associations = await dataAccess.getAssociationMembersByProfileId(
-      session.user.id
+    const rows = await dataAccess.executeQuery<{
+      id: string;
+      role: string;
+      joined_at: string;
+      association_id: string;
+      name: string;
+      description: string | null;
+      email: string | null;
+      website: string | null;
+      logo_url: string | null;
+    }>(
+      `SELECT am.id, am.role, am.joined_at, am.association_id,
+              a.name, a.description, a.email, a.website, a.logo_url
+       FROM association_members am JOIN associations a ON a.id = am.association_id
+       WHERE am.profile_id = $1 ORDER BY a.name`,
+      [session.user.id]
     );
 
-    // Transform data to match expected format
-    const formattedAssociations = associations.map(member => ({
-      id: member.id,
-      role: member.role,
-      joined_at: member.created_at,
-      association_id: member.association_id,
-      association_name: member.association_name,
-      association_description: null, // Will be populated from association data
-      association_email: null,
-      association_website: null,
-      association_logo_url: null,
+    const formattedAssociations = rows.map(r => ({
+      id: r.id,
+      role: r.role,
+      joined_at: r.joined_at,
+      association_id: r.association_id,
+      association_name: r.name,
+      association: {
+        id: r.association_id,
+        name: r.name,
+        description: r.description,
+        email: r.email,
+        website: r.website,
+        logo_url: r.logo_url,
+      },
     }));
 
     return NextResponse.json({ data: formattedAssociations, success: true });
