@@ -1,14 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "konbase-demo",
-  "main": ".open-next/worker.js",
   "compatibility_date": "2026-11-01",
-  // nodejs_compat: pg, bcryptjs, next-auth need Node APIs
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "observability": { "enabled": true }
-  // Secrets (NEXTAUTH_SECRET, POSTGRES_URL, ...): `wrangler secret put <NAME>`; local: .dev.vars
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
 }

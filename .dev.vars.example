@@ -1,7 +1,0 @@
-# Copy to .dev.vars for `npm run preview:cf` (secrets on Cloudflare: `wrangler secret put <NAME>`)
-NEXTAUTH_SECRET=change-me
-NEXTAUTH_URL=http://localhost:8787
-
-# Demo mode is automatic: with no POSTGRES_URL/DATABASE_URL the app runs on an
-# in-memory database with seed data (set DEMO_MODE=true to force it). Reset on every cold start.
-# POSTGRES_URL=postgres://user:password@host:5432/konbase

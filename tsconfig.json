@@ -1,29 +1,19 @@
 {
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "ES2022"],
-    "allowJs": false,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"],
+      "src/*": ["./src/*"]
     },
-    "types": ["node"],
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
-  },
-  "include": ["**/*.ts", "**/*.tsx", "next-env.d.ts", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "open-next.config.ts"]
+    "forceConsistentCasingInFileNames": true, // Ensure file name casing consistency
+    "strict": true, // Enable all strict type-checking options
+    "noUnusedParameters": false, // Keep allowing unused parameters if needed
+    "skipLibCheck": true,
+    "allowJs": true,
+    "noUnusedLocals": false // Keep allowing unused locals if needed
+  }
 }
