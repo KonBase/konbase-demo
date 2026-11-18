@@ -394,10 +394,12 @@ export const migrations: Migration[] = [
   },
   {
     version: '0005',
-    name: 'invitations_invited_by',
-    // /api/invitations selects and inserts invited_by, but 0003 never created it
+    name: 'invitations_extra_columns',
+    // /api/invitations selects and inserts invited_by, code and message, but 0003 never created them
     up: `
       ALTER TABLE invitations ADD COLUMN invited_by uuid REFERENCES profiles(user_id) ON DELETE SET NULL;
+      ALTER TABLE invitations ADD COLUMN code text;
+      ALTER TABLE invitations ADD COLUMN message text;
     `,
   },
 ];
