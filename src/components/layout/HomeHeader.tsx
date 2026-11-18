@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
-import { LayoutDashboard, Github, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, GitBranch as Github, MessageCircle } from 'lucide-react';
 import UserMenu from './shared/UserMenu';
 import {
   Sheet,

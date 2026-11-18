@@ -1,4 +1,4 @@
-import { Github, MessageCircle, Coffee, Heart } from 'lucide-react';
+import { GitBranch as Github, MessageCircle, Coffee, Heart } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
